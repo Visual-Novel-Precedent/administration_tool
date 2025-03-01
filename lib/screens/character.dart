@@ -1,16 +1,21 @@
 import 'dart:math';
 
+import 'package:administration_tool/models/media.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:hexcolor/hexcolor.dart';
 import 'package:image_picker_web/image_picker_web.dart';
 import 'dart:typed_data';
 
+import '../backend_clients/media/get_media.dart';
+import '../models/characters.dart';
+
 class CharacterEditor extends StatefulWidget {
-  final String initialName;
+  final Character character;
 
   const CharacterEditor({
     Key? key,
-    required this.initialName,
+    required this.character,
   }) : super(key: key);
 
   @override
@@ -20,7 +25,7 @@ class CharacterEditor extends StatefulWidget {
 class _CharacterEditorState extends State<CharacterEditor> {
   late TextEditingController nameController;
   late TextEditingController slugController;
-  Color selectedColor = Colors.blue;
+  late Color selectedColor;
   Map<String, Uint8List?> emotions = {
     'смех': null,
     'радость': null,
@@ -34,8 +39,12 @@ class _CharacterEditorState extends State<CharacterEditor> {
   @override
   void initState() {
     super.initState();
-    nameController = TextEditingController(text: widget.initialName);
-    slugController = TextEditingController(text: widget.initialName.toLowerCase().replaceAll(' ', '-'));
+    nameController = TextEditingController(text: widget.character.name);
+    slugController = TextEditingController(
+        text: widget.character.name.toLowerCase().replaceAll(' ', '-'));
+    selectedColor = HexColor(widget.character.color);
+
+    _initEmotions(widget.character.emotions);
   }
 
   @override
@@ -45,12 +54,73 @@ class _CharacterEditorState extends State<CharacterEditor> {
     super.dispose();
   }
 
+  Future<void> _initEmotions(Map<BigInt, BigInt> emot) async {
+    emot.forEach((key, value) async {
+      if (key == 1) {
+        try {
+          emotions["1"] = await _loadMedia(value);
+        } catch (e) {
+          print('Ошибка при загрузке эмоции: $e');
+        }
+      } else if (key == 2) {
+        try {
+          emotions["2"] = await _loadMedia(value);
+        } catch (e) {
+          print('Ошибка при загрузке эмоции: $e');
+        }
+      } else if (key == 3) {
+        try {
+          emotions["3"] = await _loadMedia(value);
+        } catch (e) {
+          print('Ошибка при загрузке эмоции: $e');
+        }
+      } else if (key == 4) {
+        try {
+          emotions["4"] = await _loadMedia(value);
+        } catch (e) {
+          print('Ошибка при загрузке эмоции: $e');
+        }
+      } else if (key == 5) {
+        try {
+          emotions["5"] = await _loadMedia(value);
+        } catch (e) {
+          print('Ошибка при загрузке эмоции: $e');
+        }
+      } else if (key == 6) {
+        try {
+          emotions["6"] = await _loadMedia(value);
+        } catch (e) {
+          print('Ошибка при загрузке эмоции: $e');
+        }
+      } else if (key == 7) {
+        try {
+          emotions["7"] = await _loadMedia(value);
+        } catch (e) {
+          print('Ошибка при загрузке эмоции: $e');
+        }
+      }
+    });
+  }
+
   Future<void> pickImage(String emotion) async {
     final Uint8List? bytes = await ImagePickerWeb.getImageAsBytes();
     if (bytes != null) {
       setState(() {
         emotions[emotion] = bytes;
       });
+    }
+  }
+
+  Future<Uint8List> _loadMedia(BigInt id) async {
+    try {
+      final media = await getMediaById(id.toString());
+      if (media != null) {
+        return media.fileData;
+      }
+      throw Exception('Медиа не найдено');
+    } catch (e) {
+      print('Ошибка: $e');
+      throw Exception('Ошибка при загрузке медиа: $e');
     }
   }
 
@@ -175,7 +245,8 @@ class _CharacterEditorState extends State<CharacterEditor> {
                         crossAxisCount: 3,
                         childAspectRatio: 1,
                         mainAxisSpacing: 4, // Уменьшили вертикальное расстояние
-                        crossAxisSpacing: 4, // Уменьшили горизонтальное расстояние
+                        crossAxisSpacing:
+                            4, // Уменьшили горизонтальное расстояние
                       ),
                       itemCount: emotions.length,
                       itemBuilder: (context, index) {
@@ -189,9 +260,11 @@ class _CharacterEditorState extends State<CharacterEditor> {
                           children: [
                             Container(
                               margin: EdgeInsets.only(
-                                bottom: isLastRow ? 4 : 4, // Уменьшили отступы
+                                bottom: isLastRow ? 4 : 4,
+                                // Уменьшили отступы
                                 top: 4,
-                                left: index % 3 == 0 ? 4 : 2, // Уменьшили боковые отступы
+                                left: index % 3 == 0 ? 4 : 2,
+                                // Уменьшили боковые отступы
                                 right: index % 3 == 2 ? 4 : 2,
                               ),
                               child: GestureDetector(
@@ -205,14 +278,15 @@ class _CharacterEditorState extends State<CharacterEditor> {
                                   ),
                                   child: emotions[emotion] != null
                                       ? ClipRRect(
-                                    borderRadius: BorderRadius.circular(6),
-                                    child: Image.memory(
-                                      emotions[emotion]!,
-                                      fit: BoxFit.cover,
-                                      width: 140,
-                                      height: 140,
-                                    ),
-                                  )
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                          child: Image.memory(
+                                            emotions[emotion]!,
+                                            fit: BoxFit.cover,
+                                            width: 140,
+                                            height: 140,
+                                          ),
+                                        )
                                       : Container(),
                                 ),
                               ),
