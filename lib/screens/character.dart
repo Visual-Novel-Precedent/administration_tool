@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:administration_tool/models/media.dart';
 import 'package:flutter/material.dart';
@@ -7,8 +9,14 @@ import 'package:hexcolor/hexcolor.dart';
 import 'package:image_picker_web/image_picker_web.dart';
 import 'dart:typed_data';
 
+import '../backend_clients/character/update_character.dart';
+import '../backend_clients/media/create_media.dart';
 import '../backend_clients/media/get_media.dart';
 import '../models/characters.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'dart:typed_data';
+
 
 class CharacterEditor extends StatefulWidget {
   final Character character;
@@ -35,6 +43,9 @@ class _CharacterEditorState extends State<CharacterEditor> {
     'удивление': null,
     'грусть': null,
   };
+  bool isLoading = false;
+
+  Map<BigInt, BigInt> newEmotions = {};
 
   @override
   void initState() {
@@ -45,6 +56,72 @@ class _CharacterEditorState extends State<CharacterEditor> {
     selectedColor = HexColor(widget.character.color);
 
     _initEmotions(widget.character.emotions);
+
+    newEmotions = widget.character.emotions;
+  }
+
+  Future<void> saveCharacter() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+
+      // Собираем данные для сохранения
+      final characterData = Character(
+        name: nameController.text,
+        slug: slugController.text,
+        color: '#${selectedColor.value.toRadixString(16).padLeft(8, '0')}',
+        emotions: newEmotions,
+        id: widget.character.id,
+      );
+
+      updateCharacter(characterData);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Персонаж сохранен')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка при сохранении: $e')),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  static BigInt safeBigIntParse(String? value) {
+    if (value == null || value.isEmpty) {
+      return BigInt.zero;
+    }
+    try {
+      return BigInt.parse(value);
+    } catch (e) {
+      print('Ошибка парсинга BigInt: $value - $e');
+      return BigInt.zero;
+    }
+  }
+
+  BigInt? _getEmotionId(String emotionName) {
+    switch (emotionName) {
+      case 'смех':
+        return BigInt.from(1);
+      case 'радость':
+        return BigInt.from(2);
+      case 'злость':
+        return BigInt.from(3);
+      case 'испуг':
+        return BigInt.from(4);
+      case 'спокойствие':
+        return BigInt.from(5);
+      case 'удивление':
+        return BigInt.from(6);
+      case 'грусть':
+        return BigInt.from(7);
+      default:
+        return null;
+    }
   }
 
   @override
@@ -54,73 +131,112 @@ class _CharacterEditorState extends State<CharacterEditor> {
     super.dispose();
   }
 
+  late Future<void> uploadExisting;
+
   Future<void> _initEmotions(Map<BigInt, BigInt> emot) async {
-    emot.forEach((key, value) async {
-      if (key == 1) {
-        try {
-          emotions["1"] = await _loadMedia(value);
-        } catch (e) {
-          print('Ошибка при загрузке эмоции: $e');
-        }
-      } else if (key == 2) {
-        try {
-          emotions["2"] = await _loadMedia(value);
-        } catch (e) {
-          print('Ошибка при загрузке эмоции: $e');
-        }
-      } else if (key == 3) {
-        try {
-          emotions["3"] = await _loadMedia(value);
-        } catch (e) {
-          print('Ошибка при загрузке эмоции: $e');
-        }
-      } else if (key == 4) {
-        try {
-          emotions["4"] = await _loadMedia(value);
-        } catch (e) {
-          print('Ошибка при загрузке эмоции: $e');
-        }
-      } else if (key == 5) {
-        try {
-          emotions["5"] = await _loadMedia(value);
-        } catch (e) {
-          print('Ошибка при загрузке эмоции: $e');
-        }
-      } else if (key == 6) {
-        try {
-          emotions["6"] = await _loadMedia(value);
-        } catch (e) {
-          print('Ошибка при загрузке эмоции: $e');
-        }
-      } else if (key == 7) {
-        try {
-          emotions["7"] = await _loadMedia(value);
-        } catch (e) {
-          print('Ошибка при загрузке эмоции: $e');
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      for (MapEntry<BigInt, BigInt> entry in emot.entries) {
+        String? emotionKey = _getEmotionKey(entry.key);
+        if (emotionKey != null) {
+          try {
+            final bytes = await _loadMedia(entry.value);
+            if (bytes != null && bytes.isNotEmpty) {
+              setState(() {
+                emotions[emotionKey] = bytes;
+              });
+            }
+          } catch (e) {
+            print('Ошибка при загрузке эмоции $emotionKey: $e');
+          }
         }
       }
-    });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  String? _getEmotionKey(BigInt id) {
+    switch (id.toInt()) {
+      case 1:
+        return 'смех';
+      case 2:
+        return 'радость';
+      case 3:
+        return 'злость';
+      case 4:
+        return 'испуг';
+      case 5:
+        return 'спокойствие';
+      case 6:
+        return 'удивление';
+      case 7:
+        return 'грусть';
+      default:
+        return null;
+    }
   }
 
   Future<void> pickImage(String emotion) async {
-    final Uint8List? bytes = await ImagePickerWeb.getImageAsBytes();
-    if (bytes != null) {
-      setState(() {
-        emotions[emotion] = bytes;
-      });
+    try {
+      // Просто получаем изображение как bytes
+      final bytes = await ImagePickerWeb.getImageAsBytes();
+      if (bytes == null) {
+        print('Ошибка: изображение не получено');
+        return;
+      }
+
+      // Проверяем формат PNG
+      if (bytes.length >= 8 &&
+          bytes[0] == 0x89 &&
+          bytes[1] == 0x50 &&
+          bytes[2] == 0x4E &&
+          bytes[3] == 0x47 &&
+          bytes[4] == 0x0D &&
+          bytes[5] == 0x0A &&
+          bytes[6] == 0x1A &&
+          bytes[7] == 0x0A) {
+        await _uploadImage(bytes, emotion);
+      } else {
+        print('Неверный формат файла');
+      }
+    } catch (e) {
+      print('Ошибка при обработке изображения: $e');
+    }
+  }
+
+  Future<void> _uploadImage(Uint8List bytes, String emotion) async {
+    try {
+      final id = await MediaUploader.uploadMedia(bytes, 'image/png');
+      if (id != null) {
+        setState(() {
+          var emId = _getEmotionId(emotion);
+          if (emId != null) {
+            emotions[emotion] = bytes;
+            newEmotions[emId] = safeBigIntParse(id)!;
+          }
+        });
+      }
+    } catch (e) {
+      print('Ошибка при загрузке: $e');
     }
   }
 
   Future<Uint8List> _loadMedia(BigInt id) async {
     try {
       final media = await getMediaById(id.toString());
-      if (media != null) {
+      if (media?.fileData != null && media!.fileData.isNotEmpty) {
         return media.fileData;
       }
-      throw Exception('Медиа не найдено');
+      throw Exception('Пустые данные медиа');
     } catch (e) {
-      print('Ошибка: $e');
-      throw Exception('Ошибка при загрузке медиа: $e');
+      print('Ошибка при загрузке медиа $id: $e');
+      rethrow;
     }
   }
 
@@ -221,12 +337,23 @@ class _CharacterEditorState extends State<CharacterEditor> {
                     ],
                   ),
                 ),
+                const SizedBox(
+                  height: 350,
+                ),
+                ElevatedButton(
+                  onPressed: saveCharacter,
+                  child: Text('Сохранить'),
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
 
-          // Правая панель с эмоциями
-          // Правая панель с эмоциями
           // Правая панель с эмоциями
           Expanded(
             child: Padding(
@@ -239,71 +366,79 @@ class _CharacterEditorState extends State<CharacterEditor> {
                     style: Theme.of(context).textTheme.headline6,
                   ),
                   SizedBox(height: 16),
-                  Flexible(
-                    child: GridView.builder(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        childAspectRatio: 1,
-                        mainAxisSpacing: 4, // Уменьшили вертикальное расстояние
-                        crossAxisSpacing:
-                            4, // Уменьшили горизонтальное расстояние
-                      ),
-                      itemCount: emotions.length,
-                      itemBuilder: (context, index) {
-                        String emotion = emotions.keys.elementAt(index);
+                  isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : Flexible(
+                          child: GridView.builder(
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              childAspectRatio: 1,
+                              mainAxisSpacing: 4,
+                              crossAxisSpacing: 4,
+                            ),
+                            itemCount: emotions.length,
+                            itemBuilder: (context, index) {
+                              String emotion = emotions.keys.elementAt(index);
 
-                        bool isLastRow = index >= emotions.length - 1;
-
-                        return Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              margin: EdgeInsets.only(
-                                bottom: isLastRow ? 4 : 4,
-                                // Уменьшили отступы
-                                top: 4,
-                                left: index % 3 == 0 ? 4 : 2,
-                                // Уменьшили боковые отступы
-                                right: index % 3 == 2 ? 4 : 2,
-                              ),
-                              child: GestureDetector(
-                                onTap: () => pickImage(emotion),
-                                child: Container(
-                                  width: 140, // Увеличили размер квадрата
-                                  height: 140,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: emotions[emotion] != null
-                                      ? ClipRRect(
+                              return Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    margin: EdgeInsets.only(
+                                      bottom:
+                                          index >= emotions.length - 1 ? 4 : 4,
+                                      top: 4,
+                                      left: index % 3 == 0 ? 4 : 2,
+                                      right: index % 3 == 2 ? 4 : 2,
+                                    ),
+                                    child: GestureDetector(
+                                      onTap: () => pickImage(emotion),
+                                      child: Container(
+                                        width: 140,
+                                        height: 140,
+                                        decoration: BoxDecoration(
+                                          border:
+                                              Border.all(color: Colors.grey),
                                           borderRadius:
-                                              BorderRadius.circular(6),
-                                          child: Image.memory(
-                                            emotions[emotion]!,
-                                            fit: BoxFit.cover,
-                                            width: 140,
-                                            height: 140,
-                                          ),
-                                        )
-                                      : Container(),
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              emotion,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: emotions[emotion] != null
+                                            ? ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                                child: Image.memory(
+                                                  emotions[emotion]!,
+                                                  fit: BoxFit.cover,
+                                                  width: 140,
+                                                  height: 140,
+                                                  errorBuilder: (context, error,
+                                                      stackTrace) {
+                                                    print(
+                                                        'Ошибка при загрузке изображения: $error');
+                                                    return const Icon(
+                                                        Icons.error_outline);
+                                                  },
+                                                ),
+                                              )
+                                            : const Icon(Icons.image),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    emotion,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
                 ],
               ),
             ),

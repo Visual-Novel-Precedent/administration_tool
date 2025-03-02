@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../backend_clients/admin/authorization.dart';
+import '../models/admin.dart';
+import 'main_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -10,9 +15,18 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
 
-  // Контроллеры для полей формы
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    // Не забудьте освободить ресурсы
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Admin? globalAdmin;
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +63,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 30),
 
                   TextFormField(
-                    controller: emailController,
+                    controller: _emailController,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Введите почту';
@@ -68,7 +82,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 15),
 
                   TextFormField(
-                    controller: passwordController,
+                    controller: _passwordController,
                     obscureText: true,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -88,9 +102,38 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 20),
 
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       if (_formKey.currentState!.validate()) {
-                        Navigator.pushReplacementNamed(context, '/dashboard');
+                        try {
+                          final admin = await authorizationAdmin(
+                            _emailController.text,
+                            _passwordController.text,
+                          );
+
+                          if (admin != null) {
+                            // Переход на DashboardScreen
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DashboardScreen(admin: admin), // передайте нужный ID
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Ошибка при сохранении данных админа'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Ошибка регистрации: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
                       }
                     },
                     style: ElevatedButton.styleFrom(
@@ -130,12 +173,5 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
-    super.dispose();
   }
 }

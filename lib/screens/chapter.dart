@@ -1,3 +1,4 @@
+import 'package:administration_tool/screens/tree.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
 
@@ -6,112 +7,8 @@ import 'character_position_in_node.dart';
 import 'event.dart';
 import 'image_upload.dart';
 
-class TreePainter extends CustomPainter {
-  final List<Node> nodes;
-  final double maxNodeWidth;
-
-  TreePainter(this.nodes, this.maxNodeWidth);
-
-  double calculateTreeCenterX(List<Node> nodes) {
-    double maxX = double.negativeInfinity;
-    double minX = double.infinity;
-    void traverse(Node node) {
-      maxX = max(maxX, node.x);
-      minX = min(minX, node.x);
-      for (final child in node.children) {
-        traverse(child);
-      }
-    }
-
-    traverse(nodes.first);
-    return (maxX + minX) / 2;
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-// Вычисляем центр дерева
-    final centerX = size.width / 2;
-    final treeCenterX = calculateTreeCenterX(nodes);
-// Вычисляем смещение для центрирования по середине дерева
-    final offsetX = centerX - treeCenterX * size.width;
-    canvas.save();
-    canvas.translate(offsetX, 0);
-    _drawConnections(canvas, size, nodes);
-    _drawNodesRecursive(canvas, size, nodes);
-    canvas.restore();
-  }
-
-  void _drawConnections(Canvas canvas, Size size, List<Node> nodes) {
-    for (final node in nodes) {
-      for (final child in node.children) {
-        final startX = size.width * node.x;
-        final startY = size.height * node.y;
-        final endX = size.width * child.x;
-        final endY = size.height * child.y;
-        final angle = atan2(endY - startY, endX - startX);
-
-        const offset = 15;
-
-        final startXOffset = startX + offset * cos(angle);
-        final startYOffset = startY + offset * sin(angle);
-        final endXOffset = endX - offset * cos(angle);
-        final endYOffset = endY - offset * sin(angle);
-        canvas.drawLine(
-          Offset(startXOffset, startYOffset),
-          Offset(endXOffset, endYOffset),
-          Paint()
-            ..color = Colors.grey
-            ..strokeWidth = 1
-            ..style = PaintingStyle.stroke,
-        );
-      }
-      _drawConnections(canvas, size, node.children);
-    }
-  }
-
-  void _drawNodesRecursive(Canvas canvas, Size size, List<Node> nodes) {
-    for (final node in nodes) {
-      final x = size.width * node.x;
-      final y = size.height * node.y;
-      canvas.drawCircle(
-        Offset(x, y),
-        20,
-        Paint()
-          ..color = Colors.blue
-          ..style = PaintingStyle.fill,
-      );
-      final textSpan = TextSpan(
-        text: node.title,
-        style: const TextStyle(
-          color: Colors.black,
-          fontSize: 14,
-          fontWeight: FontWeight.normal,
-        ),
-      );
-      final textPainter = TextPainter(
-        text: textSpan,
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout(
-        minWidth: 100,
-        maxWidth: 100,
-      );
-      final textOffset = Offset(
-        x - textPainter.width / 2,
-        y - 30,
-      );
-      textPainter.paint(canvas, textOffset);
-      _drawNodesRecursive(canvas, size, node.children);
-    }
-  }
-
-  @override
-  bool shouldRepaint(TreePainter oldDelegate) => true;
-}
-
 class ChapterScreen extends StatefulWidget {
   final String chapterTitle;
-
   const ChapterScreen({super.key, required this.chapterTitle});
 
   @override
@@ -119,17 +16,6 @@ class ChapterScreen extends StatefulWidget {
 }
 
 class _ChapterScreenState extends State<ChapterScreen> {
-  List<Node> nodes = [
-    Node(
-      id: 1,
-      title: 'Начало',
-      x: 0.5,
-      y: 0.1,
-      children: [],
-    ),
-  ];
-  double maxNodeWidth = 1.0;
-
   // Добавляем состояние для заголовка
   String _chapterTitle = '';
 
@@ -146,142 +32,10 @@ class _ChapterScreenState extends State<ChapterScreen> {
     });
   }
 
-  void addNodesToLeaf(Node node, int count) {
-    final baseSpacing = 0.15; // Уменьшили с 0.3 до 0.15
-    final levelSpacing = 0.15; // Уменьшили с 0.3 до 0.15
-    double minX = node.x - (count - 1) * baseSpacing / 2;
-    final newNodes = List.generate(count, (index) {
-      return Node(
-        id: nodes.length + index + 1,
-        title: 'Новый узел ${nodes.length + index + 1}',
-        x: minX + index * baseSpacing,
-        y: node.y + levelSpacing,
-        children: [],
-      );
-    });
-    node.children = newNodes;
-    setState(() {
-      TreeLayout.layoutTree(nodes.first);
-      final oldWidth = maxNodeWidth;
-      maxNodeWidth = calculateMaxWidth(nodes, 1.0);
-      final scaleFactor = maxNodeWidth / oldWidth;
-      maxNodeWidth = oldWidth * 2 * scaleFactor;
-    });
-  }
+  final _random = Random();
 
-  double calculateMaxWidth(List<Node> nodes, double scaleFactor) {
-    double maxWidth = 0;
-    void traverse(Node node) {
-      double currentWidth = node.x;
-      for (final child in node.children) {
-        currentWidth = max(currentWidth, child.x);
-        traverse(child);
-      }
-      maxWidth = max(maxWidth, currentWidth);
-    }
-
-    traverse(nodes.first);
-    return maxWidth * scaleFactor;
-  }
-
-  double calculateTreeHeight(BoxConstraints constraints) {
-    double maxHeight = 0;
-    void traverse(Node node) {
-      double currentHeight = node.y;
-      for (final child in node.children) {
-        currentHeight = max(currentHeight, child.y);
-        traverse(child);
-      }
-      maxHeight = max(maxHeight, currentHeight);
-    }
-
-    traverse(nodes.first);
-    return maxHeight * constraints.maxHeight * 2;
-  }
-
-  void showAddNodesDialog(Node node) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        final controller = TextEditingController();
-        return AlertDialog(
-          title: const Text('Добавить узлы'),
-          content: TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Количество узлов',
-              hintText: 'Введите число',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Отмена'),
-            ),
-            TextButton(
-              onPressed: () {
-                final count = int.tryParse(controller.text) ?? 0;
-                if (count > 0) {
-                  addNodesToLeaf(node, count);
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text('Добавить'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Node? findNodeAtPosition(List<Node> nodes, double x, double y) {
-    Node? findNode(Node node) {
-      if ((node.x - x).abs() < 0.05 && (node.y - y).abs() < 0.05) {
-        return node;
-      }
-      for (final child in node.children) {
-        final found = findNode(child);
-        if (found != null) return found;
-      }
-      return null;
-    }
-
-    return findNode(nodes.first);
-  }
-
-  Node? _findNearestLeafNode(List<Node> nodes, double x, double y) {
-    Node? nearestLeaf;
-    double minDistance = double.infinity;
-    void checkNode(Node node) {
-      if (node.children.isEmpty) {
-        final distance = sqrt(pow(node.x - x, 2) + pow(node.y - y, 2));
-        if (distance < minDistance) {
-          minDistance = distance;
-          nearestLeaf = node;
-        }
-      }
-      for (final child in node.children) {
-        checkNode(child);
-      }
-    }
-
-    for (final node in nodes) {
-      checkNode(node);
-    }
-    return nearestLeaf;
-  }
-
-  void _handleTapOnTree(double x, double y) {
-    Node? clickedNode = findNodeAtPosition(nodes, x, y);
-    if (clickedNode == null) {
-      Node? nearestLeaf = _findNearestLeafNode(nodes, x, y);
-      if (nearestLeaf != null) {
-        showAddNodesDialog(nearestLeaf);
-      }
-    } else if (clickedNode.children.isEmpty) {
-      showAddNodesDialog(clickedNode);
-    }
+  int generateRandomId() {
+    return _random.nextInt(1000);
   }
 
   @override
@@ -316,8 +70,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
                           context: context,
                           builder: (context) {
                             final controller =
-                                TextEditingController(text: _chapterTitle);
-
+                            TextEditingController(text: _chapterTitle);
                             return AlertDialog(
                               title: const Text('Редактировать название главы'),
                               content: TextField(
@@ -353,12 +106,10 @@ class _ChapterScreenState extends State<ChapterScreen> {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
-                // Изменено с CrossAxisAlignment.start
                 children: [
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       shape: const RoundedRectangleBorder(
                         borderRadius: BorderRadius.zero,
                         side: BorderSide.none,
@@ -367,8 +118,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
                       elevation: 0,
                       shadowColor: Colors.transparent,
                       foregroundColor: Colors.black,
-                      textStyle: const TextStyle(
-                          fontSize: 16), // Добавлено для увеличения шрифта
+                      textStyle: const TextStyle(fontSize: 16),
                     ),
                     onPressed: () {
                       showDialog(
@@ -386,8 +136,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
                   const SizedBox(height: 10),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       shape: const RoundedRectangleBorder(
                         borderRadius: BorderRadius.zero,
                         side: BorderSide.none,
@@ -396,8 +145,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
                       elevation: 0,
                       shadowColor: Colors.transparent,
                       foregroundColor: Colors.black,
-                      textStyle: const TextStyle(
-                          fontSize: 16), // Добавлено для увеличения шрифта
+                      textStyle: const TextStyle(fontSize: 16),
                     ),
                     onPressed: () {
                       debugPrint('Пытаемся показать диалог');
@@ -418,8 +166,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
                   const SizedBox(height: 10),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       shape: const RoundedRectangleBorder(
                         borderRadius: BorderRadius.zero,
                         side: BorderSide.none,
@@ -428,8 +175,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
                       elevation: 0,
                       shadowColor: Colors.transparent,
                       foregroundColor: Colors.black,
-                      textStyle: const TextStyle(
-                          fontSize: 16), // Добавлено для увеличения шрифта
+                      textStyle: const TextStyle(fontSize: 16),
                     ),
                     onPressed: () {
                       debugPrint('Пытаемся показать диалог');
@@ -450,8 +196,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
                   const SizedBox(height: 10),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       shape: const RoundedRectangleBorder(
                         borderRadius: BorderRadius.zero,
                         side: BorderSide.none,
@@ -460,8 +205,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
                       elevation: 0,
                       shadowColor: Colors.transparent,
                       foregroundColor: Colors.black,
-                      textStyle: const TextStyle(
-                          fontSize: 16), // Добавлено для увеличения шрифта
+                      textStyle: const TextStyle(fontSize: 16),
                     ),
                     onPressed: () {
                       showDialog(
@@ -486,8 +230,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
                   const SizedBox(height: 10),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       shape: const RoundedRectangleBorder(
                         borderRadius: BorderRadius.zero,
                         side: BorderSide.none,
@@ -496,15 +239,9 @@ class _ChapterScreenState extends State<ChapterScreen> {
                       elevation: 0,
                       shadowColor: Colors.transparent,
                       foregroundColor: Colors.black,
-                      textStyle: const TextStyle(
-                          fontSize: 16), // Добавлено для увеличения шрифта
+                      textStyle: const TextStyle(fontSize: 16),
                     ),
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => const CommentDialog(),
-                      );
-                    },
+                    onPressed: () {},
                     child: const Text('Комментарий'),
                   ),
                 ],
@@ -512,133 +249,10 @@ class _ChapterScreenState extends State<ChapterScreen> {
             ]),
           ),
           Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTapUp: (details) {
-                    final RenderBox renderBox =
-                        context.findRenderObject() as RenderBox;
-                    final localPosition =
-                        renderBox.globalToLocal(details.globalPosition);
-                    _handleTapOnTree(localPosition.dx / renderBox.size.width,
-                        localPosition.dy / renderBox.size.height);
-                  },
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: RawScrollbar(
-                        thumbColor: Colors.grey.withOpacity(0.5),
-                        thickness: 8,
-                        radius: Radius.circular(32),
-                        child: CustomPaint(
-                          painter: TreePainter(nodes, maxNodeWidth),
-                          child: SizedBox(
-                            width: maxNodeWidth * constraints.maxWidth * 1.5,
-                            height: calculateTreeHeight(constraints),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          )
+            child: TreeView(),
+          ),
         ],
       ),
-    );
-  }
-}
-
-class Node {
-  final int id;
-  final String title;
-  double x;
-  double y;
-  List<Node> children;
-
-  Node({
-    required this.id,
-    required this.title,
-    required this.x,
-    required this.y,
-    this.children = const [],
-  });
-}
-
-class TreeLayout {
-  static void layoutTree(Node root, {double yPad = 0.1}) {
-    // Уменьшили с 0.2 до 0.1
-    root.y = 0;
-    double layoutNode(Node node, double xBound, double y) {
-      if (node.children.isEmpty) {
-        node.x = xBound;
-        return xBound + 0.05; // Уменьшили с 0.1 до 0.05
-      }
-
-      double xLeft = double.infinity;
-      double xRight = double.negativeInfinity;
-      double newXBound = xBound;
-
-      for (final child in node.children) {
-        final bound = layoutNode(child, newXBound, y + yPad);
-        xLeft = min(xLeft, child.x);
-        xRight = max(xRight, child.x);
-        newXBound = max(newXBound, bound);
-      }
-
-      node.x = (xLeft + xRight) / 2;
-      node.y = y;
-      return newXBound;
-    }
-
-    layoutNode(root, 0.5, 0);
-  }
-}
-
-class CommentDialog extends StatefulWidget {
-  const CommentDialog({super.key});
-
-  @override
-  State<CommentDialog> createState() => _CommentDialogState();
-}
-
-class _CommentDialogState extends State<CommentDialog> {
-  final TextEditingController controller = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Новый комментарий'),
-      content: TextField(
-        maxLines: null,
-        expands: true,
-        minLines: null,
-        controller: controller,
-        decoration: const InputDecoration(
-          labelText: 'Текст комментария',
-          hintText: 'Введите ваш комментарий здесь...',
-          border: OutlineInputBorder(),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Отмена'),
-        ),
-        TextButton(
-          onPressed: () {
-            if (controller.text.isNotEmpty) {
-              // Здесь можно добавить логику сохранения комментария
-              debugPrint('Сохранен комментарий: ${controller.text}');
-              Navigator.pop(context);
-            }
-          },
-          child: const Text('Сохранить'),
-        ),
-      ],
     );
   }
 }

@@ -41,8 +41,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<Character> characters = [];
 
   @override
+  @override
   void initState() {
     super.initState();
+    _loadChapters();
+    _loadCharacters();
+    _loadRequests();
+
+    // Добавляем слушатель для обновления при возврате
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      // Проверяем, вернулись ли мы назад
+      if (ModalRoute.of(context)?.isCurrent != true) {
+        reloadData();
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(DashboardScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!mounted) return;
+
+    // Обновляем данные при возврате на экран
+    if (ModalRoute.of(context)?.isCurrent == true) {
+      reloadData();
+    }
+  }
+
+  void reloadData() {
     _loadChapters();
     _loadCharacters();
     _loadRequests();

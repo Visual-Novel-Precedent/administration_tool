@@ -1,4 +1,7 @@
+import 'package:administration_tool/screens/authorization.dart';
 import 'package:flutter/material.dart';
+
+import '../backend_clients/admin/registration.dart';
 
 class RegistrationPage extends StatefulWidget {
   const RegistrationPage({super.key});
@@ -106,22 +109,36 @@ class _RegistrationPageState extends State<RegistrationPage> {
                   const SizedBox(height: 20),
 
                   ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        // Здесь будет код обработки регистрации
+                    onPressed: () async {
+                      final email = 'email@example.com';
+                      final username = 'Имя пользователя';
+                      final password = 'пароль';
+
+                      // Проверка корректности email
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Форма заполнена корректно')),
+                          const SnackBar(content: Text('Пожалуйста, введите корректный адрес электронной почты')),
+                        );
+                        return;
+                      }
+
+                      try {
+                        final userId = await registerAdmin(email, username, password);
+
+                        // Перенаправление на страницу входа после успешной регистрации
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => const LoginPage()),
+                        );
+
+                        print('Пользователь зарегистрирован с ID: $userId');
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Ошибка регистрации: $e')),
                         );
                       }
                     },
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 45),
-                      backgroundColor: Colors.blue,
-                    ),
-                    child: const Text(
-                      'Зарегистрироваться',
-                      style: TextStyle(fontSize: 16),
-                    ),
+                    child: const Text('Зарегистрироваться'),
                   ),
 
                   const SizedBox(height: 15),
