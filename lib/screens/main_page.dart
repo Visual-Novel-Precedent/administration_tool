@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:administration_tool/backend_clients/requests/create_request.dart';
@@ -183,10 +184,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     textStyle: const TextStyle(fontSize: 16),
   );
 
+  String convertToUtf8(String input) {
+    List<int> bytes = input.codeUnits;
+    return utf8.decode(bytes);
+  }
+
   void debugStatus() {
     print('Текущий статус админа: ${widget.admin.adminStatus}');
     print('Текущая выбранная опция: $selectedOption');
     print('Состояние виджета: ${mounted ? 'mounted' : 'unmounted'}');
+  }
+
+  // Добавьте этот код для отладки
+  void debugText(String? text) {
+    if (text == null) {
+      print('Текст равен null');
+      return;
+    }
+
+    print('--- Отладочная информация ---');
+    print('Длина текста: ${text.length}');
+    print('Кодировка: ${text.codeUnits}');
+    print('UTF-8 байты: ${text.codeUnits.map((b) => b.toRadixString(2).padLeft(8, '0')).join(' ')}');
+    print('Тип данных: ${text.runtimeType}');
+    print('---------------------------');
   }
 
   @override
@@ -212,11 +233,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.admin.name,
-                        style: TextStyle(
+                        convertToUtf8(widget.admin.name),
+                        style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
+                          fontFamily: 'Roboto',
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 20),
 
