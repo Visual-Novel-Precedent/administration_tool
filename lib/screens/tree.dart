@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../backend_clients/node/get_node_by_id.dart';
 import '../backend_clients/node/get_nodes_by_chapter_id.dart';
+import '../models/chapter.dart';
 import '../models/node.dart';
 import 'package:collection/collection.dart';
+
+import 'chapter.dart';
 
 // Класс для представления узла дерева
 class Node {
@@ -29,10 +32,11 @@ class Node {
 
 // Виджет дерева
 class TreeView extends StatefulWidget {
+  final Chapter chapter;
   final ChapterNode startNode;
   final List<ChapterNode> chapterNodes;
 
-  const TreeView({super.key, required this.chapterNodes, required this.startNode});
+  const TreeView({super.key, required this.chapterNodes, required this.startNode,required this.chapter});
 
   @override
   _TreeViewState createState() => _TreeViewState();
@@ -43,8 +47,6 @@ class _TreeViewState extends State<TreeView> {
   Node? selectedNode;
   BigInt? newNode;
 
-  double? _maxWidth;
-
   @override
   void initState() {
     super.initState();
@@ -53,7 +55,17 @@ class _TreeViewState extends State<TreeView> {
     print(widget.startNode);
     print(widget.chapterNodes);
 
-    root = initializeNode(Node(id: widget.startNode.id, title: "Начало главы") ,widget.startNode, widget.chapterNodes);
+    late ChapterNode st;
+
+    widget.chapterNodes.forEach((element) {
+      if (element.id== widget.chapter.startNode) {
+        st = element;
+      }
+    });
+
+    root = initializeNode(Node(id: widget.chapter.startNode, title: "Начало главы") ,st, widget.chapterNodes);
+
+    selectedNode = findNode(root, widget.startNode.id);
   }
 
   void clearSelection() {
@@ -62,10 +74,74 @@ class _TreeViewState extends State<TreeView> {
     });
   }
 
+  Node? findNode(Node root, BigInt targetId) {
+    // Проверяем текущий узел
+    if (root.id == targetId) {
+      return root;
+    }
+
+    // Проверяем дочерние узлы
+    for (final child in root.children) {
+      final found = findNode(child, targetId);
+      if (found != null) {
+        return found;
+      }
+    }
+
+    return null;
+  }
+
   void selectNode(Node node) {
+    print('Выбранный узел: ${node.title}, ID: ${node.id}');
+
     setState(() {
       selectedNode = node;
     });
+
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation1, animation2) => FutureBuilder<ChapterNode?>(
+          future: initializeChapterNode(node.id.toString()),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            // Добавляем проверку при возврате
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              setState(() {
+                selectedNode = node;
+              });
+            });
+
+            print("snapshot.data!");
+            print(snapshot.data!);
+
+            return ChapterScreen(
+              chapter: widget.chapter,
+              chapterNode: snapshot.data!,
+            );
+          },
+        ),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      ),
+    );
+  }
+
+  Future<ChapterNode?> initializeChapterNode(String nodeId) async {
+    print("gопытка получить startNode");
+    print(nodeId);
+    try {
+      final ChapterNode? nodes = await getNodeById(safeBigIntParse(nodeId));
+      print("получено начальный узел");
+      print(nodes);
+      return nodes;
+    } catch (e) {
+      print('Ошибка при инициализации chapterNode: $e');
+      rethrow;
+    }
   }
 
   // Change the return type from void to Node

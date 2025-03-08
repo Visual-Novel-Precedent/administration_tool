@@ -87,13 +87,16 @@ class _ChapterScreenState extends State<ChapterScreen> {
 
   @override
   void initState() {
+
+    print("cgapterNodeddd");
+    print(widget.chapterNode);
     super.initState();
     _chapterTitle = widget.chapter.name;
     _loadChapterNodes();
     print("получили узлы");
     print(_chapterNodes);
 
-    initializeChapterNode(widget.chapter.startNode.toString());
+    initializeChapterNode(widget.chapterNode.id.toString());
 
     print("инициализировали начальный узел");
     print(chapterNode);
@@ -102,6 +105,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
     _initializeAudio();
 
     _loadCharacters();
+
   }
 
   ChapterNode convertChapterNodeForUpdateToChapterNode(
@@ -655,6 +659,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
 
                 final nodes = snapshot.data!;
                 return TreeView(
+                  chapter: widget.chapter,
                   chapterNodes: nodes,
                   startNode: chapterNode!,
                 );
