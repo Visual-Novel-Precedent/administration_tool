@@ -5,7 +5,6 @@ class Chapter {
   final List<BigInt> nodes;
   final List<BigInt> characters;
   final int status;
-  final Map<DateTime, BigInt> updatedAt;
   final BigInt author;
 
   Chapter({
@@ -15,7 +14,6 @@ class Chapter {
     required this.nodes,
     required this.characters,
     required this.status,
-    required this.updatedAt,
     required this.author,
   });
 
@@ -60,7 +58,6 @@ class Chapter {
       nodes: safeBigIntListParse(json['Nodes']),
       characters: safeBigIntListParse(json['Characters']),
       status: json['Status'] ?? 0,
-      updatedAt: safeDateTimeBigIntMapParse(json['UpdatedAt']),
       author: safeBigIntParse(json['Author']),
     );
   }
@@ -73,8 +70,6 @@ class Chapter {
       'Nodes': nodes.map((e) => e.toString()).toList(),
       'Characters': characters.map((e) => e.toString()).toList(),
       'Status': status,
-      'UpdatedAt': updatedAt.map((key, value) =>
-          MapEntry(key.toIso8601String(), value.toString())),
       'Author': author.toString(),
     };
   }
@@ -82,7 +77,6 @@ class Chapter {
   @override
   String toString() {
     return 'Chapter(id: $id, name: $name, startNode: $startNode, '
-        'nodes: $nodes, characters: $characters, status: $status, '
-        'updatedAt: $updatedAt, author: $author)';
+        'nodes: $nodes, characters: $characters, status: $status, author: $author)';
   }
 }

@@ -14,9 +14,9 @@ void main() {
     routes: {
       '/register': (context) => const RegistrationPage(),
       '/login': (context) => const LoginPage(),
-      '/chapter': (context) => const ChapterScreen(
-        chapterTitle: 'Глава 1', // передайте нужное название главы
-      ),
+      // '/chapter': (context) => const ChapterScreen(
+      //   chapterTitle: 'Глава 1', // передайте нужное название главы
+      // ),
     },
   ));
 }

@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart';
 import 'package:http_parser/http_parser.dart';
+
+
 class MediaUploader {
   static Future<String?> uploadMedia(Uint8List fileData, String contentType) async {
     try {

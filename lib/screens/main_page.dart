@@ -8,13 +8,16 @@ import 'package:flutter/material.dart';
 
 import '../backend_clients/chapter/get_chapter_list.dart';
 import '../backend_clients/character/get_characters.dart';
+import '../backend_clients/node/get_node_by_id.dart';
 import '../backend_clients/requests/approve_request.dart';
 import '../backend_clients/requests/get_requests.dart';
 import '../backend_clients/requests/reject_request.dart';
 import '../models/chapter.dart';
 import '../models/characters.dart';
+import '../models/node.dart';
 import '../models/request.dart';
 import 'authorization.dart';
+import 'chapter.dart';
 
 // Главный экран приложения
 class DashboardScreen extends StatefulWidget {
@@ -41,7 +44,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Добавляем список персонажей
   List<Character> characters = [];
 
-  @override
+  ChapterNode? chapterNode;
+
   @override
   void initState() {
     super.initState();
@@ -195,6 +199,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     print('Состояние виджета: ${mounted ? 'mounted' : 'unmounted'}');
   }
 
+  Future<ChapterNode?> initializeChapterNode(String nodeId) async {
+    print("gопытка получить startNode");
+    print(nodeId);
+    try {
+      final ChapterNode? nodes = await getNodeById(safeBigIntParse(nodeId));
+      print("получено начальный узел");
+      print(nodes);
+      chapterNode = nodes;
+      return nodes;
+    } catch (e) {
+      print('Ошибка при инициализации chapterNode: $e');
+      chapterNode = null;
+      rethrow;
+    }
+  }
+
+  static BigInt safeBigIntParse(String? value) {
+    if (value == null || value.isEmpty) {
+      return BigInt.zero;
+    }
+    try {
+      return BigInt.parse(value);
+    } catch (e) {
+      print('Ошибка парсинга BigInt: $value - $e');
+      return BigInt.zero;
+    }
+  }
+
   // Добавьте этот код для отладки
   void debugText(String? text) {
     if (text == null) {
@@ -205,7 +237,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     print('--- Отладочная информация ---');
     print('Длина текста: ${text.length}');
     print('Кодировка: ${text.codeUnits}');
-    print('UTF-8 байты: ${text.codeUnits.map((b) => b.toRadixString(2).padLeft(8, '0')).join(' ')}');
+    print(
+        'UTF-8 байты: ${text.codeUnits.map((b) => b.toRadixString(2).padLeft(8, '0')).join(' ')}');
     print('Тип данных: ${text.runtimeType}');
     print('---------------------------');
   }
@@ -454,7 +487,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               nodes: [],
                               characters: [],
                               status: 0,
-                              updatedAt: {},
                               author: widget.admin.id,
                             ));
                           });
@@ -507,7 +539,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   IconButton(
                                     icon: const Icon(Icons.edit),
                                     onPressed: () {
-                                      // Добавьте логику редактирования
+                                      print("chspters");
+                                      print(chapters[index]);
+                                      print("chapterNode");
+                                      print(chapterNode);
+                                      print("startNode");
+                                      print(chapters[index].startNode.toString());
+
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => FutureBuilder<ChapterNode?>(
+                                            future: initializeChapterNode(chapters[index].startNode.toString()),
+                                            builder: (context, snapshot) {
+                                              if (!snapshot.hasData) {
+                                                return const Center(
+                                                  child: CircularProgressIndicator(),
+                                                );
+                                              }
+
+                                              return ChapterScreen(
+                                                chapter: chapters[index],
+                                                chapterNode: snapshot.data!,
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      );
                                     },
                                   ),
                                 ],
@@ -563,7 +621,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                                 requestId);
 
                                                         if (success) {
-                                                          removeRequestAtIndex(index);
+                                                          removeRequestAtIndex(
+                                                              index);
                                                         }
                                                       } catch (e) {
                                                         print(
@@ -605,17 +664,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                   TextButton(
                                                     onPressed: () async {
                                                       try {
-                                                        final requestId = requests[index].id;
-                                                        bool success = await rejectRequest(requestId);
+                                                        final requestId =
+                                                            requests[index].id;
+                                                        bool success =
+                                                            await rejectRequest(
+                                                                requestId);
 
                                                         if (success) {
-                                                          removeRequestAtIndex(index);
+                                                          removeRequestAtIndex(
+                                                              index);
                                                         }
                                                       } catch (e) {
-                                                        print('Ошибка при отклонении запроса: $e');
+                                                        print(
+                                                            'Ошибка при отклонении запроса: $e');
                                                       }
                                                     },
-                                                    child: const Text('Подтвердить'),
+                                                    child: const Text(
+                                                        'Подтвердить'),
                                                   ),
                                                 ],
                                               ),
@@ -643,8 +708,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    CharacterEditor(character: characters[index]),
+                                builder: (context) => CharacterEditor(
+                                    character: characters[index]),
                               ),
                             );
                           },
@@ -743,5 +808,3 @@ BigInt generateRandomBigIntFromTime() {
 
   return shiftedRight;
 }
-
-

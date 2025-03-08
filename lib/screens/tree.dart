@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../backend_clients/node/get_node_by_id.dart';
+import '../backend_clients/node/get_nodes_by_chapter_id.dart';
+import '../models/node.dart';
+import 'package:collection/collection.dart';
+
 // Класс для представления узла дерева
 class Node {
-  String id;
+  BigInt id;
   String title;
   List<Node> children;
 
@@ -12,13 +17,23 @@ class Node {
     List<Node>? children,
   }) : children = children ?? [];
 
-  factory Node.empty(String id, String title) {
+  factory Node.empty(BigInt id, String title) {
     return Node(id: id, title: title, children: []);
+  }
+
+  @override
+  String toString() {
+    return 'Node(id: $id, title: "$title", children: ${children.length} items)';
   }
 }
 
 // Виджет дерева
 class TreeView extends StatefulWidget {
+  final ChapterNode startNode;
+  final List<ChapterNode> chapterNodes;
+
+  const TreeView({super.key, required this.chapterNodes, required this.startNode});
+
   @override
   _TreeViewState createState() => _TreeViewState();
 }
@@ -26,18 +41,19 @@ class TreeView extends StatefulWidget {
 class _TreeViewState extends State<TreeView> {
   late Node root;
   Node? selectedNode;
+  BigInt? newNode;
+
+  double? _maxWidth;
 
   @override
   void initState() {
     super.initState();
-    root = Node(
-      id: 'root',
-      title: 'Корневой узел',
-      children: [
-        Node(id: 'child1', title: 'Дочерний узел 1'),
-        Node(id: 'child2', title: 'Дочерний узел 2'),
-      ],
-    );
+
+    print("проверка");
+    print(widget.startNode);
+    print(widget.chapterNodes);
+
+    root = initializeNode(Node(id: widget.startNode.id, title: "Начало главы") ,widget.startNode, widget.chapterNodes);
   }
 
   void clearSelection() {
@@ -50,6 +66,80 @@ class _TreeViewState extends State<TreeView> {
     setState(() {
       selectedNode = node;
     });
+  }
+
+  // Change the return type from void to Node
+  Node initializeNode(Node node, ChapterNode startNode, List<ChapterNode> nodes) {
+
+    print("aормируем список");
+    print(node);
+    print(startNode);
+    print(nodes);
+
+    // Инициализируем базовые поля узла
+    node.id = startNode.id;
+    node.title = startNode.slug;
+
+    print(startNode.branching.flag);
+    print(startNode.branching.condition.isNotEmpty);
+
+    // Если есть флаг ветвления, создаем детей рекурсивно
+    if (startNode.branching.flag && startNode.branching.condition.isNotEmpty) {
+      print("зашли");
+      node.children = _initializeChildren(startNode, nodes);
+    } else {
+      node.children = [];
+    }
+
+    print("заполненный узел");
+    print(node);
+
+    return node; // Возвращаем заполненный узел
+  }
+
+  Future<void> initializeChapterNodeById(String nodeId) async {
+    try {
+      print("hhhhhhhhhhh");
+      final ChapterNode? nodes = await getNodeById(safeBigIntParse(nodeId));
+      newNode = nodes?.id!;
+    } catch (e) {
+      print('Ошибка при инициализации chapterNode: $e');
+      newNode = null;
+      rethrow;
+    }
+  }
+
+  static BigInt safeBigIntParse(String? value) {
+    if (value == null || value.isEmpty) {
+      return BigInt.zero;
+    }
+    try {
+      return BigInt.parse(value);
+    } catch (e) {
+      print('Ошибка парсинга BigInt: $value - $e');
+      return BigInt.zero;
+    }
+  }
+
+// Вспомогательная функция для создания дочерних узлов
+  List<Node> _initializeChildren(ChapterNode chapterNode, List<ChapterNode> nodes) {
+    List<Node> children = [];
+
+    // Для каждого условия ветвления создаём новый узел
+    for (final entry in chapterNode.branching.condition.entries) {
+      // Находим ChapterNode по id из условия
+      final childChapter = nodes.firstWhereOrNull(
+              (node) => node.id == entry.value
+      );
+
+      if (childChapter != null) {
+        Node newNode = Node.empty(entry.value, entry.key);
+        initializeNode(newNode, childChapter, nodes); // Рекурсивный вызов
+        children.add(newNode);
+      }
+    }
+
+    return children;
   }
 
   void _addChildren(Node node) async {
@@ -78,7 +168,7 @@ class _TreeViewState extends State<TreeView> {
                     ),
                     ...List.generate(
                       controllers.length - 1,
-                          (index) => TextField(
+                      (index) => TextField(
                         controller: controllers[index + 1],
                         decoration: const InputDecoration(
                           labelText: 'Заголовок узла',
@@ -113,7 +203,7 @@ class _TreeViewState extends State<TreeView> {
                       setState(() {
                         for (var i = 0; i < titles.length; i++) {
                           node.children.add(Node(
-                            id: '${node.id}_child_${node.children.length}',
+                            id: newNode!,
                             title: titles[i],
                           ));
                         }
@@ -142,6 +232,16 @@ class _TreeViewState extends State<TreeView> {
     return null;
   }
 
+  bool checkIfTextFits(String text, TextStyle style, double maxWidth) {
+    final TextPainter textPainter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+    )..layout(minWidth: 0, maxWidth: maxWidth);
+
+    // Проверяем, превышает ли ширина текста максимально допустимую
+    return textPainter.size.width > maxWidth;
+  }
+
   void _deleteNode(Node node) {
     setState(() {
       clearSelection();
@@ -168,18 +268,24 @@ class _TreeViewState extends State<TreeView> {
           ),
           Expanded(
             child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TreeNode(
-                    node: root,
-                    onNodeTap: _addChildren,
-                    onDeleteNode: _deleteNode,
-                    onSelectNode: selectNode,
-                    selectedNode: selectedNode,
+              scrollDirection: Axis.horizontal, // Добавляем горизонтальную прокрутку
+              child: Container(
+                width: MediaQuery.of(context).size.width, // Фиксируем ширину
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TreeNode(
+                        node: root,
+                        onNodeTap: _addChildren,
+                        onDeleteNode: _deleteNode,
+                        onSelectNode: selectNode,
+                        selectedNode: selectedNode,
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -220,7 +326,8 @@ class _TreeNodeState extends State<TreeNode> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Подтверждение удаления'),
-          content: Text('Вы уверены, что хотите удалить узел "${widget.node.title}" и все его дочерние элементы?'),
+          content: Text(
+              'Вы уверены, что хотите удалить узел "${widget.node.title}" и все его дочерние элементы?'),
           actions: [
             TextButton(
               child: const Text('Отмена'),
@@ -262,12 +369,13 @@ class _TreeNodeState extends State<TreeNode> {
               color: isSelected
                   ? Colors.blue.withOpacity(0.1)
                   : _isHovered
-                  ? Colors.grey.withOpacity(0.1)
-                  : Colors.transparent,
+                      ? Colors.grey.withOpacity(0.1)
+                      : Colors.transparent,
               child: Row(
                 children: [
                   IconButton(
-                    icon: Icon(_isExpanded ? Icons.expand_less : Icons.expand_more),
+                    icon: Icon(
+                        _isExpanded ? Icons.expand_less : Icons.expand_more),
                     onPressed: () => setState(() => _isExpanded = !_isExpanded),
                   ),
                   IconButton(
@@ -283,7 +391,8 @@ class _TreeNodeState extends State<TreeNode> {
                     child: Text(
                       widget.node.title,
                       style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -299,12 +408,12 @@ class _TreeNodeState extends State<TreeNode> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ...widget.node.children.map((child) => TreeNode(
-                    node: child,
-                    onNodeTap: widget.onNodeTap,
-                    onDeleteNode: widget.onDeleteNode,
-                    onSelectNode: widget.onSelectNode,
-                    selectedNode: widget.selectedNode,
-                  )),
+                        node: child,
+                        onNodeTap: widget.onNodeTap,
+                        onDeleteNode: widget.onDeleteNode,
+                        onSelectNode: widget.onSelectNode,
+                        selectedNode: widget.selectedNode,
+                      )),
                 ],
               ),
             ),

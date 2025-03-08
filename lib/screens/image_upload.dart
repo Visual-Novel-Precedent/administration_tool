@@ -3,8 +3,15 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../backend_clients/media/create_media.dart';
+
 class ImageUploadDialog extends StatefulWidget {
-  const ImageUploadDialog({super.key});
+  final Uint8List? background;
+
+  const ImageUploadDialog({
+    super.key,
+    required this.background,
+  });
 
   @override
   State<ImageUploadDialog> createState() => _ImageUploadDialogState();
@@ -12,8 +19,28 @@ class ImageUploadDialog extends StatefulWidget {
 
 class _ImageUploadDialogState extends State<ImageUploadDialog> {
   Uint8List? _selectedImageBytes;
+  Uint8List? _currentImageBytes; // Новое поле для текущего изображения
   final ImagePicker _picker = ImagePicker();
   double _uploadProgress = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentImageBytes = widget.background; // Инициализируем из background
+  }
+
+  Future<void> _uploadMedia(Uint8List bytes, BuildContext context) async {
+    try {
+      final id = await MediaUploader.uploadMedia(bytes, 'image/png');
+      if (id != null) {
+        print("новое медиа");
+        print(id);
+        Navigator.of(context).pop(id); // Возвращаем только ID
+      }
+    } catch (e) {
+      print('Ошибка при загрузке: $e');
+    }
+  }
 
   Future<void> _selectImage() async {
     try {
@@ -29,7 +56,6 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
 
         int totalBytes = await image.length();
         int bytesRead = 0;
-
         final stream = image.openRead();
         final bytesBuilder = BytesBuilder();
 
@@ -47,9 +73,9 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
         }));
 
         final Uint8List bytes = bytesBuilder.toBytes();
-
         setState(() {
           _selectedImageBytes = bytes;
+          _currentImageBytes = bytes; // Обновляем текущее изображение
           _uploadProgress = 100;
         });
 
@@ -102,16 +128,19 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
               ),
               child: Stack(
                 children: [
-                  _selectedImageBytes != null
+                  // Отображаем текущее изображение или placeholder
+                  _currentImageBytes != null
                       ? Image.memory(
-                    _selectedImageBytes!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      debugPrint('Ошибка загрузки изображения: $error');
-                      return const Center(child: Icon(Icons.error));
-                    },
-                  )
+                          _currentImageBytes!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            debugPrint('Ошибка загрузки изображения: $error');
+                            return const Center(child: Icon(Icons.error));
+                          },
+                        )
                       : const Center(child: Icon(Icons.image_outlined)),
+
+                  // Прогресс индикатор загрузки
                   if (_uploadProgress > 0 && _uploadProgress < 100)
                     Positioned.fill(
                       child: Column(
@@ -136,6 +165,13 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
             ElevatedButton(
               onPressed: _selectImage,
               child: const Text('Выбрать изображение'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                _uploadMedia(_currentImageBytes!, context);
+              },
+              child: const Text('Сохранить'),
             ),
             const SizedBox(height: 8),
             TextButton(

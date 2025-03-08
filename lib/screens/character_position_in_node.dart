@@ -1,14 +1,42 @@
 import 'dart:convert';
+import 'package:administration_tool/screens/event.dart';
 import 'package:flutter/material.dart';
 
+import '../models/characters.dart';
+import '../models/node.dart';
+
 class SceneCharacters extends StatefulWidget {
-  const SceneCharacters({super.key});
+  final List<Character> characters;
+  final EventForUpdate events;
+
+  const SceneCharacters(
+      {super.key, required this.characters, required this.events});
 
   @override
   State<SceneCharacters> createState() => _SceneCharactersState();
 }
 
 class _SceneCharactersState extends State<SceneCharacters> {
+  List<Character> characters = [];
+  EventForUpdate? event;
+
+  List<Map<String, dynamic>> charactersData = [];
+
+  List<Map<String, dynamic>> availableCharacters = [];
+
+  @override
+  void initState() {
+    event = widget.events;
+    characters = widget.characters;
+
+    print("попали такие персонажи и сцены");
+    print(event);
+    print(characters);
+
+    initCharactersData();
+    initAvailableData();
+  }
+
   final List<String> emotions = [
     'смех',
     'радость',
@@ -19,37 +47,55 @@ class _SceneCharactersState extends State<SceneCharacters> {
     'грусть'
   ];
 
-  Map<String, dynamic> charactersData = {
-    "characters": [
-      {
-        "name": "Юля",
-        "position": 0,
-        "emotions": ["радость"],
-      },
-      {
-        "name": "Даня",
-        "position": 0,
-        "emotions": ["спокойствие"],
-      },
-      {
-        "name": "Эви",
-        "position": 0,
-        "emotions": ["смех"],
-      },
-      {
-        "name": "Павел",
-        "position": 0,
-        "emotions": ["злость"],
-      }
-    ]
-  };
+  void initCharactersData() {
+    event?.charactersInEvent.forEach((id, posEm) {
+      String? name;
+      BigInt? pos;
+      String? emotion;
 
-  List<Map<String, dynamic>> availableCharacters = [
-    {"name": "Настя", "position": 0},
-    {"name": "Жора", "position": 0},
-    {"name": "Сергей", "position": 0},
-    {"name": "Даша", "position": 0},
-  ];
+      characters.forEach((ch) {
+        if (ch.id == id) {
+          name = ch.name;
+
+          posEm.forEach((em, position) {
+            pos = position;
+            emotion = emotions[em.toInt() - 1];
+          });
+        }
+      });
+
+      if (name != null && pos != null && emotion != null) {
+        charactersData.add({
+          "id": id,
+          "name": name,
+          "position": pos,
+          "emotions": [emotion],
+        });
+      }
+    });
+
+    print("инициализировли список персонажей для отображения ");
+    print(charactersData);
+  }
+
+  void initAvailableData() {
+    characters.forEach((ch) {
+      bool flag = false;
+
+      event?.charactersInEvent.forEach((id, posEm) {
+        if (ch.id == id) {
+          flag = true;
+        }
+      });
+
+      if (!flag) {
+        availableCharacters.add({"name": ch.name, "position": 0, "id": ch.id});
+      }
+    });
+
+    print("инициализировли список оставшихся персонажей ");
+    print(availableCharacters);
+  }
 
   void showDialogToAddCharacter(BuildContext context) {
     showDialog(
@@ -64,16 +110,30 @@ class _SceneCharactersState extends State<SceneCharacters> {
               itemCount: availableCharacters.length,
               itemBuilder: (context, index) {
                 final Map<String, dynamic> character =
-                availableCharacters[index];
+                    availableCharacters[index];
                 return ListTile(
                   title: Text(character['name'] as String),
                   onTap: () {
                     setState(() {
-                      charactersData['characters'].add(
-                          Map<String, Object>.fromEntries(character.entries.map(
-                                  (entry) => MapEntry<String, Object>(
-                                  entry.key, entry.value))));
+                      // Добавляем нового персонажа с начальными значениями
+                      Map<String, dynamic> newCharacter = {
+                        "id": character['id'],
+                        "name": character['name'],
+                        "position": BigInt.from(0), // Начальная позиция
+                        "emotions": [emotions[0]], // Начальная эмоция
+                      };
+
+                      charactersData.add(newCharacter);
                       availableCharacters.removeAt(index);
+
+                      // Обновляем event.charactersInEvent
+                      event?.charactersInEvent[character['id']] = {
+                        BigInt.from(1): BigInt.from(0)
+                      };
+
+                      print('Добавлен новый персонаж:');
+                      print('charactersData: $charactersData');
+                      print('event: ${event?.charactersInEvent}');
                     });
                     Navigator.of(context).pop();
                   },
@@ -97,6 +157,15 @@ class _SceneCharactersState extends State<SceneCharacters> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Персонажи в сцене'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            print("Возвращаемся со страницы редактирования персонажей");
+            print(event);
+            print(event?.charactersInEvent);
+            Navigator.pop(context, event);
+          },
+        ),
       ),
       body: Column(
         children: [
@@ -109,25 +178,66 @@ class _SceneCharactersState extends State<SceneCharacters> {
           ),
           Expanded(
             child: ListView.builder(
-              itemCount: charactersData['characters'].length,
+              itemCount: charactersData.length,
               itemBuilder: (context, index) {
-                final character = charactersData['characters'][index] as Map<String, dynamic>;
+                final character = charactersData[index];
                 return CharacterCard(
                   character: character,
                   emotions: emotions,
                   onEmotionChange: (String newEmotion) {
+                    print("новая эмоция");
+                    print(newEmotion);
                     setState(() {
-                      character['emotions'] = [newEmotion];
+                      final index = charactersData.indexWhere((char) => char['id'] == character['id']);
+                      if (index != -1) {
+                        charactersData[index]['emotion'] = newEmotion;
+                        print('Обновлено в charactersData: ${charactersData[index]['emotion']}');
+
+                        final emotionIndex = emotions.indexOf(newEmotion);
+                        if (emotionIndex == -1) {
+                          print('Эмоция не найдена в списке!');
+                          return;
+                        }
+
+                        // Преобразуем в BigInt напрямую из индекса
+                        BigInt emotionBigInt = BigInt.from(emotionIndex + 1);
+
+                        // Получаем текущую позицию как BigInt
+                        BigInt positionBigInt = BigInt.from(charactersData[index]['position'].toInt());
+
+                        event?.charactersInEvent[character['id']] = {
+                          emotionBigInt: positionBigInt
+                        };
+
+                        print('event?.charactersInEvent[character["id"]]: ${event?.charactersInEvent[character["id"]]}');
+                      }
                     });
                   },
                   onPositionChange: (double newPosition) {
                     setState(() {
                       character['position'] = newPosition;
+
+                      BigInt emotionIndex = BigInt.from(
+                          emotions.indexOf(character['emotions'].first));
+                      if (emotionIndex == BigInt.zero) {
+                        character['emotion'] = BigInt.from(1);
+                      }
+
+                      event?.charactersInEvent[character['id']] = {
+                        emotionIndex: BigInt.from(newPosition)
+                      };
+
+                      print('Обновлена позиция:');
+                      print('character: ${character['position']}');
+                      print(
+                          'event: ${event?.charactersInEvent[character['id']]}');
                     });
                   },
                   onDelete: () {
                     setState(() {
-                      charactersData['characters'].removeAt(index);
+                      event?.charactersInEvent.remove(character["id"]);
+                      availableCharacters.add(charactersData[index]);
+                      charactersData.removeAt(index);
                     });
                   },
                 );
@@ -140,12 +250,12 @@ class _SceneCharactersState extends State<SceneCharacters> {
   }
 }
 
-class CharacterCard extends StatelessWidget {
+class CharacterCard extends StatefulWidget {
   final Map<String, dynamic> character;
   final List<String> emotions;
-  final void Function(String) onEmotionChange;
-  final void Function(double) onPositionChange;
-  final void Function() onDelete;
+  final Function(String) onEmotionChange;
+  final Function(double) onPositionChange;
+  final Function() onDelete;
 
   const CharacterCard({
     super.key,
@@ -157,10 +267,21 @@ class CharacterCard extends StatelessWidget {
   });
 
   @override
+  State<CharacterCard> createState() => _CharacterCardState();
+}
+
+class _CharacterCardState extends State<CharacterCard> {
+  String _selectedEmotion = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedEmotion = widget.character['emotions']?.first as String;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    String currentEmotion = character['emotions'] == null || character['emotions'].isEmpty
-        ? emotions[0]
-        : character['emotions'].first as String;
+    String currentEmotion = widget.character['emotions']?.first as String;
 
     return Card(
       margin: const EdgeInsets.all(8.0),
@@ -174,7 +295,7 @@ class CharacterCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    character['name'] as String,
+                    widget.character['name'] as String,
                     style: const TextStyle(
                       fontSize: 18.0,
                       fontWeight: FontWeight.bold,
@@ -182,13 +303,16 @@ class CharacterCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 16.0),
                   DropdownButton<String>(
-                    value: currentEmotion,
+                    value: _selectedEmotion, // Используем локальную переменную
                     onChanged: (String? newValue) {
                       if (newValue != null) {
-                        onEmotionChange(newValue);
+                        setState(() {
+                          _selectedEmotion = newValue;
+                          widget.onEmotionChange(newValue);
+                        });
                       }
                     },
-                    items: emotions.map((emotion) {
+                    items: widget.emotions.map((emotion) {
                       return DropdownMenuItem(
                         value: emotion,
                         child: Text(emotion),
@@ -201,14 +325,14 @@ class CharacterCard extends StatelessWidget {
                       const Text('Позиция: '),
                       Expanded(
                         child: Slider(
-                          value: character['position'].toDouble(),
+                          value: widget.character['position'].toDouble(),
                           min: 0.0,
                           max: 100.0,
                           divisions: 100,
-                          onChanged: onPositionChange,
+                          onChanged: widget.onPositionChange,
                         ),
                       ),
-                      Text('${character['position'].toInt()}%'),
+                      Text('${widget.character['position'].toInt()}%'),
                     ],
                   ),
                 ],
@@ -216,9 +340,7 @@ class CharacterCard extends StatelessWidget {
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.red),
-              onPressed: () {
-                onDelete();
-              },
+              onPressed: widget.onDelete,
             ),
           ],
         ),
