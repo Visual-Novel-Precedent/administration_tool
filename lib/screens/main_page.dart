@@ -393,7 +393,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           shadowColor: Colors.transparent,
                           foregroundColor: Colors.black,
                         ),
-                        child: const Text('Запросы'),
+                        child: const Text(
+                          'Запросы',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.black,
+                          ),
+                        ),
                       ),
                       const Divider(height: 1, thickness: 1),
 
@@ -450,8 +456,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
-
-          // Правая часть с контентом
           // Правая часть с контентом
           Expanded(
             child: Column(

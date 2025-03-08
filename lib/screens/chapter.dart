@@ -370,6 +370,16 @@ class _ChapterScreenState extends State<ChapterScreen> {
     return result ?? {};
   }
 
+  Future<Uint8List?> handleMusicUpload() async {
+    if (chapterNodeForUpdate?.music != null) {
+      final BigInt mediaId = chapterNodeForUpdate?.music ?? BigInt.from(0);
+      final loadedAudio = await _loadMedia(mediaId);
+      return loadedAudio;
+    }
+
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -441,8 +451,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
                 children: [
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       shape: const RoundedRectangleBorder(
                         borderRadius: BorderRadius.zero,
                         side: BorderSide.none,
@@ -454,47 +463,23 @@ class _ChapterScreenState extends State<ChapterScreen> {
                       textStyle: const TextStyle(fontSize: 16),
                     ),
                     onPressed: () {
-                      if (chapterNodeForUpdate?.background != null) {
-                        final BigInt mediaId =
-                            chapterNodeForUpdate?.background ?? BigInt.from(0);
-                        _loadMedia(mediaId).then((loadedBackground) {
-                          background = loadedBackground;
-
-                          showDialog<String>(
-                            context: context,
-                            builder: (context) =>
-                                ImageUploadDialog(background: background),
-                          ).then((newImage) {
-                            if (newImage != null) {
-                              _loadMedia(safeBigIntParse(newImage))
-                                  .then((newImageData) {
-                                setState(() {
-                                  chapterNodeForUpdate?.background =
-                                      safeBigIntParse(newImage);
-                                  background = newImageData;
-
-                                  ChapterNode newNode =
-                                      convertChapterNodeForUpdateToChapterNode(
-                                          chapterNodeForUpdate);
-
-                                  // Обновляем узел после успешного изменения фона
-                                  updateNode(newNode).then((success) {
-                                    if (success) {
-                                      print('Узел успешно обновлен');
-                                    } else {
-                                      print('Ошибка при обновлении узла');
-                                    }
-                                  }).catchError((e) {
-                                    print('Ошибка при обновлении узла: $e');
-                                  });
-                                });
-                              });
-                            }
+                      // Удаляем проверку на null
+                      showDialog<String>(
+                        context: context,
+                        builder: (context) => ImageUploadDialog(
+                          background: background, // передаем текущее значение background
+                        ),
+                      ).then((newImage) {
+                        if (newImage != null) {
+                          _loadMedia(safeBigIntParse(newImage))
+                              .then((newImageData) {
+                            setState(() {
+                              chapterNodeForUpdate?.background = safeBigIntParse(newImage);
+                              background = newImageData;
+                            });
                           });
-                        }).catchError((e) {
-                          print('Ошибка при загрузке аудио: $e');
-                        });
-                      }
+                        }
+                      });
                     },
                     child: const Text('Фон'),
                   ),
@@ -506,8 +491,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
                   const SizedBox(height: 10),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       shape: const RoundedRectangleBorder(
                         borderRadius: BorderRadius.zero,
                         side: BorderSide.none,
@@ -519,47 +503,24 @@ class _ChapterScreenState extends State<ChapterScreen> {
                       textStyle: const TextStyle(fontSize: 16),
                     ),
                     onPressed: () {
-                      if (chapterNodeForUpdate?.music != null) {
-                        final BigInt mediaId =
-                            chapterNodeForUpdate?.music ?? BigInt.from(0);
-                        _loadMedia(mediaId).then((loadedAudio) {
-                          audio = loadedAudio;
-
-                          showDialog<String>(
-                            context: context,
-                            builder: (context) =>
-                                AudioUploadDialog(existingAudio: audio),
-                          ).then((newAudio) {
-                            if (newAudio != null) {
-                              _loadMedia(safeBigIntParse(newAudio))
-                                  .then((newAudioData) {
-                                setState(() {
-                                  chapterNodeForUpdate?.music =
-                                      safeBigIntParse(newAudio);
-                                  audio = newAudioData;
-                                });
-                              });
-
-                              ChapterNode newNode =
-                                  convertChapterNodeForUpdateToChapterNode(
-                                      chapterNodeForUpdate);
-
-                              // Обновляем узел после успешного изменения фона
-                              updateNode(newNode).then((success) {
-                                if (success) {
-                                  print('Узел успешно обновлен');
-                                } else {
-                                  print('Ошибка при обновлении узла');
-                                }
-                              }).catchError((e) {
-                                print('Ошибка при обновлении узла: $e');
-                              });
-                            }
+                      // Убедимся, что диалог открывается
+                      print('Нажата кнопка "Аудио"');
+                      showDialog<String>(
+                        context: context,
+                        builder: (context) => AudioUploadDialog(
+                          existingAudio: audio, // передаем текущее значение audio
+                        ),
+                      ).then((newAudio) {
+                        if (newAudio != null) {
+                          _loadMedia(safeBigIntParse(newAudio))
+                              .then((newAudioData) {
+                            setState(() {
+                              chapterNodeForUpdate?.music = safeBigIntParse(newAudio);
+                              audio = newAudioData;
+                            });
                           });
-                        }).catchError((e) {
-                          print('Ошибка при загрузке аудио: $e');
-                        });
-                      }
+                        }
+                      });
                     },
                     child: const Text('Аудио'),
                   ),
@@ -583,6 +544,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
                       foregroundColor: Colors.black,
                       textStyle: const TextStyle(fontSize: 16),
                     ),
+
                     onPressed: () async {
                       final events = await showSceneEditorDialog(context);
 

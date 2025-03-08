@@ -30,8 +30,17 @@ class _AudioUploadDialogState extends State<AudioUploadDialog> {
   @override
   void initState() {
     super.initState();
+    print('Инициализация AudioUploadDialog');
     if (widget.existingAudio != null) {
       _setupExistingAudio();
+    } else {
+      print('Начальное значение аудио: null');
+      setState(() {
+        _audioBytes = null;
+        _audioUrl = null;
+        _uploadProgress = 0;
+        _error = null;
+      });
     }
   }
 
