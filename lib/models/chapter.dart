@@ -64,13 +64,13 @@ class Chapter {
 
   Map<String, dynamic> toJson() {
     return {
-      'Id': id.toString(),
-      'Name': name,
-      'StartNode': startNode.toString(),
-      'Nodes': nodes.map((e) => e.toString()).toList(),
-      'Characters': characters.map((e) => e.toString()).toList(),
-      'Status': status,
-      'Author': author.toString(),
+      'id': id.toString(),
+      'name': name,
+      'start_node': startNode.toString(),
+      'nodes': nodes.map((e) => e.toString()).toList(),
+      'characters': characters.map((e) => e.toString()).toList(),
+      'status': status,
+      'author': author.toString(),
     };
   }
 

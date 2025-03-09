@@ -1,14 +1,17 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:administration_tool/screens/tree.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
 
+import '../backend_clients/chapter/update_chapter.dart';
 import '../backend_clients/character/get_characters.dart';
 import '../backend_clients/media/get_media.dart';
 import '../backend_clients/node/get_node_by_id.dart';
 import '../backend_clients/node/get_nodes_by_chapter_id.dart';
 import '../backend_clients/node/update_node.dart';
+import '../backend_clients/requests/create_request.dart';
 import '../models/chapter.dart';
 import '../models/characters.dart';
 import '../models/node.dart';
@@ -66,9 +69,13 @@ class ChapterNodeForUpdate {
 class ChapterScreen extends StatefulWidget {
   final Chapter chapter;
   final ChapterNode chapterNode;
+  final BigInt admin;
 
   const ChapterScreen(
-      {super.key, required this.chapter, required this.chapterNode});
+      {super.key,
+      required this.chapter,
+      required this.chapterNode,
+      required this.admin});
 
   @override
   State<ChapterScreen> createState() => _ChapterScreenState();
@@ -87,7 +94,6 @@ class _ChapterScreenState extends State<ChapterScreen> {
 
   @override
   void initState() {
-
     print("cgapterNodeddd");
     print(widget.chapterNode);
     super.initState();
@@ -105,7 +111,6 @@ class _ChapterScreenState extends State<ChapterScreen> {
     _initializeAudio();
 
     _loadCharacters();
-
   }
 
   ChapterNode convertChapterNodeForUpdateToChapterNode(
@@ -349,10 +354,8 @@ class _ChapterScreenState extends State<ChapterScreen> {
     }
   }
 
-  Future<Map<int, Event>> showSceneEditorDialog(
-      BuildContext context) async {
-    final Map<int, Event>? result =
-        await showDialog<Map<int, Event>>(
+  Future<Map<int, Event>> showSceneEditorDialog(BuildContext context) async {
+    final Map<int, Event>? result = await showDialog<Map<int, Event>>(
       context: context,
       builder: (BuildContext context) {
         return Dialog(
@@ -380,6 +383,11 @@ class _ChapterScreenState extends State<ChapterScreen> {
     return null;
   }
 
+  String convertToUtf8(String input) {
+    List<int> bytes = input.codeUnits;
+    return utf8.decode(bytes);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -398,7 +406,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        _chapterTitle,
+                        convertToUtf8(_chapterTitle),
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -428,10 +436,33 @@ class _ChapterScreenState extends State<ChapterScreen> {
                                   child: const Text('Отмена'),
                                 ),
                                 TextButton(
-                                  onPressed: () {
+                                  onPressed: () async {
                                     if (controller.text.isNotEmpty) {
-                                      updateChapterTitle(controller.text);
-                                      Navigator.pop(context);
+                                      try {
+                                        final request = UpdateChapterRequest(
+                                          id: widget.chapter!.id,
+                                          name: controller.text,
+                                          updateAuthorId: BigInt.from(1),
+                                        );
+
+                                        final success =
+                                            await updateChapter(request);
+                                        if (success) {
+                                          setState(() {
+                                            _chapterTitle = controller.text;
+                                          });
+                                          Navigator.pop(context);
+                                        }
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'Ошибка при обновлении названия: $e'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
                                     }
                                   },
                                   child: const Text('Сохранить'),
@@ -451,7 +482,8 @@ class _ChapterScreenState extends State<ChapterScreen> {
                 children: [
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                       shape: const RoundedRectangleBorder(
                         borderRadius: BorderRadius.zero,
                         side: BorderSide.none,
@@ -467,14 +499,16 @@ class _ChapterScreenState extends State<ChapterScreen> {
                       showDialog<String>(
                         context: context,
                         builder: (context) => ImageUploadDialog(
-                          background: background, // передаем текущее значение background
+                          background:
+                              background, // передаем текущее значение background
                         ),
                       ).then((newImage) {
                         if (newImage != null) {
                           _loadMedia(safeBigIntParse(newImage))
                               .then((newImageData) {
                             setState(() {
-                              chapterNodeForUpdate?.background = safeBigIntParse(newImage);
+                              chapterNodeForUpdate?.background =
+                                  safeBigIntParse(newImage);
                               background = newImageData;
                             });
                           });
@@ -491,7 +525,8 @@ class _ChapterScreenState extends State<ChapterScreen> {
                   const SizedBox(height: 10),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                       shape: const RoundedRectangleBorder(
                         borderRadius: BorderRadius.zero,
                         side: BorderSide.none,
@@ -508,14 +543,16 @@ class _ChapterScreenState extends State<ChapterScreen> {
                       showDialog<String>(
                         context: context,
                         builder: (context) => AudioUploadDialog(
-                          existingAudio: audio, // передаем текущее значение audio
+                          existingAudio:
+                              audio, // передаем текущее значение audio
                         ),
                       ).then((newAudio) {
                         if (newAudio != null) {
                           _loadMedia(safeBigIntParse(newAudio))
                               .then((newAudioData) {
                             setState(() {
-                              chapterNodeForUpdate?.music = safeBigIntParse(newAudio);
+                              chapterNodeForUpdate?.music =
+                                  safeBigIntParse(newAudio);
                               audio = newAudioData;
                             });
                           });
@@ -544,16 +581,20 @@ class _ChapterScreenState extends State<ChapterScreen> {
                       foregroundColor: Colors.black,
                       textStyle: const TextStyle(fontSize: 16),
                     ),
-
                     onPressed: () async {
                       final events = await showSceneEditorDialog(context);
 
-                      if (events.isNotEmpty) {
+                      print("получаем events");
+                      print(events);
 
+                      if (events.isNotEmpty) {
                         chapterNodeForUpdate?.events = events;
 
-                        ChapterNode newNode = convertChapterNodeForUpdateToChapterNode(
-                            chapterNodeForUpdate);
+                        ChapterNode newNode =
+                            convertChapterNodeForUpdateToChapterNode(
+                                chapterNodeForUpdate);
+
+                        print(newNode);
 
                         print("пытаемся сохранить узел");
 
@@ -597,11 +638,33 @@ class _ChapterScreenState extends State<ChapterScreen> {
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () {
-                      // Здесь будет логика сохранения
-                      print('Сохранение данных...');
+                    onPressed: widget.chapter.status != 1
+                        ? null
+                        : () async {
+                      try {
+                        createRequest(
+                          CreateRequestRequest(
+                            requestingAdminId: widget.admin.toString(),
+                            chapterId: widget.chapter.id.toString(),
+                            type: 1,
+                          ),
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Запрос на публикацию главы отправлен'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Ошибка при отправке запроса: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     },
-                    child: const Text('Сохранить'),
+                    child: const Text('Опубликовать'),
                   ),
                 ],
               )
@@ -624,6 +687,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
                   chapter: widget.chapter,
                   chapterNodes: nodes,
                   startNode: chapterNode!,
+                  admin: widget.admin,
                 );
               },
             ),

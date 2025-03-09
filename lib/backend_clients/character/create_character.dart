@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart';
 
-Future<String?> createCharacter(String name, String slug) async {
+Future<BigInt?> createCharacter(String name, String slug) async {
   try {
     print('1. Начало создания персонажа');
 
@@ -27,7 +27,7 @@ Future<String?> createCharacter(String name, String slug) async {
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final Map<String, dynamic> responseBody = jsonDecode(response.body);
-      return responseBody['id'];
+      return safeBigIntParse(responseBody['id']);
     } else {
       throw Exception('Ошибка создания персонажа: ${response.statusCode}');
     }
@@ -35,5 +35,17 @@ Future<String?> createCharacter(String name, String slug) async {
     print('6. Тип ошибки: ${e.runtimeType}');
     print('7. Сообщение ошибки: $e');
     rethrow;
+  }
+}
+
+BigInt safeBigIntParse(String? value) {
+  if (value == null || value.isEmpty) {
+    return BigInt.zero;
+  }
+  try {
+    return BigInt.parse(value);
+  } catch (e) {
+    print('Ошибка парсинга BigInt: $value - $e');
+    return BigInt.zero;
   }
 }

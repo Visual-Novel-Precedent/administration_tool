@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../backend_clients/chapter/update_chapter.dart';
+import '../backend_clients/node/create_node.dart';
 import '../backend_clients/node/get_node_by_id.dart';
 import '../backend_clients/node/get_nodes_by_chapter_id.dart';
+import '../backend_clients/node/update_node.dart';
 import '../models/chapter.dart';
 import '../models/node.dart';
 import 'package:collection/collection.dart';
@@ -28,6 +31,17 @@ class Node {
   String toString() {
     return 'Node(id: $id, title: "$title", children: ${children.length} items)';
   }
+
+  List<BigInt> collectAllIds() {
+    final ids = <BigInt>[id]; // Начинаем с id текущего узла
+
+    // Рекурсивно добавляем id всех потомков
+    for (final child in children) {
+      ids.addAll(child.collectAllIds());
+    }
+
+    return ids;
+  }
 }
 
 // Виджет дерева
@@ -35,8 +49,14 @@ class TreeView extends StatefulWidget {
   final Chapter chapter;
   final ChapterNode startNode;
   final List<ChapterNode> chapterNodes;
+  final BigInt admin;
 
-  const TreeView({super.key, required this.chapterNodes, required this.startNode,required this.chapter});
+  const TreeView(
+      {super.key,
+      required this.chapterNodes,
+      required this.startNode,
+      required this.chapter,
+      required this.admin});
 
   @override
   _TreeViewState createState() => _TreeViewState();
@@ -47,23 +67,37 @@ class _TreeViewState extends State<TreeView> {
   Node? selectedNode;
   BigInt? newNode;
 
+  Chapter? chapter;
+  List<ChapterNode>? chapterNodes;
+
   @override
   void initState() {
     super.initState();
+
+    chapter = widget.chapter;
+    chapterNodes = widget.chapterNodes;
 
     print("проверка");
     print(widget.startNode);
     print(widget.chapterNodes);
 
-    late ChapterNode st;
+    _verifyNodes(chapterNodes!);
 
+    late ChapterNode st;
     widget.chapterNodes.forEach((element) {
-      if (element.id== widget.chapter.startNode) {
+      if (element.id == widget.chapter.startNode) {
         st = element;
       }
     });
 
-    root = initializeNode(Node(id: widget.chapter.startNode, title: "Начало главы") ,st, widget.chapterNodes);
+    print("ghишедшие узлы");
+    print(widget.chapterNodes);
+    root = initializeNode(
+        Node(id: widget.chapter.startNode, title: "Начало главы"),
+        st,
+        widget.chapterNodes);
+
+    print(root);
 
     selectedNode = findNode(root, widget.startNode.id);
   }
@@ -101,7 +135,8 @@ class _TreeViewState extends State<TreeView> {
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        pageBuilder: (context, animation1, animation2) => FutureBuilder<ChapterNode?>(
+        pageBuilder: (context, animation1, animation2) =>
+            FutureBuilder<ChapterNode?>(
           future: initializeChapterNode(node.id.toString()),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
@@ -121,6 +156,7 @@ class _TreeViewState extends State<TreeView> {
             return ChapterScreen(
               chapter: widget.chapter,
               chapterNode: snapshot.data!,
+              admin: widget.admin,
             );
           },
         ),
@@ -145,8 +181,8 @@ class _TreeViewState extends State<TreeView> {
   }
 
   // Change the return type from void to Node
-  Node initializeNode(Node node, ChapterNode startNode, List<ChapterNode> nodes) {
-
+  Node initializeNode(
+      Node node, ChapterNode startNode, List<ChapterNode> nodes) {
     print("aормируем список");
     print(node);
     print(startNode);
@@ -173,18 +209,6 @@ class _TreeViewState extends State<TreeView> {
     return node; // Возвращаем заполненный узел
   }
 
-  Future<void> initializeChapterNodeById(String nodeId) async {
-    try {
-      print("hhhhhhhhhhh");
-      final ChapterNode? nodes = await getNodeById(safeBigIntParse(nodeId));
-      newNode = nodes?.id!;
-    } catch (e) {
-      print('Ошибка при инициализации chapterNode: $e');
-      newNode = null;
-      rethrow;
-    }
-  }
-
   static BigInt safeBigIntParse(String? value) {
     if (value == null || value.isEmpty) {
       return BigInt.zero;
@@ -197,37 +221,78 @@ class _TreeViewState extends State<TreeView> {
     }
   }
 
+  void _verifyNodes(List<ChapterNode> nodes) {
+    final nodeIds = nodes.map((n) => n.id).toSet();
+    print("Доступные узлы: $nodeIds");
+
+    // Проверка отсутствующих узлов
+    final missingIds = [
+      safeBigIntParse('114131118735455260'),
+      safeBigIntParse('114131118733240320'),
+      safeBigIntParse('114131118739534860')
+    ];
+
+    for (final id in missingIds) {
+      if (!nodeIds.contains(id)) {
+        print("Отсутствует узел с ID: $id");
+      }
+    }
+  }
+
 // Вспомогательная функция для создания дочерних узлов
-  List<Node> _initializeChildren(ChapterNode chapterNode, List<ChapterNode> nodes) {
+  List<Node> _initializeChildren(
+      ChapterNode chapterNode, List<ChapterNode> nodes) {
     List<Node> children = [];
+    print("=== Начало обработки узла ===");
+    print("ID текущего узла: ${chapterNode.id}");
+    print("Параметры ветвления: ${chapterNode.branching.condition}");
 
     // Для каждого условия ветвления создаём новый узел
     for (final entry in chapterNode.branching.condition.entries) {
+      print("\nОбработка условия ветвления:");
+      print("Ключ: ${entry.key}, Значение: ${entry.value}");
+
       // Находим ChapterNode по id из условия
-      final childChapter = nodes.firstWhereOrNull(
-              (node) => node.id == entry.value
-      );
+      final childChapter =
+          nodes.firstWhereOrNull((node) => node.id == entry.value);
+      print("Найден дочерний узел: $childChapter");
 
       if (childChapter != null) {
         Node newNode = Node.empty(entry.value, entry.key);
-        initializeNode(newNode, childChapter, nodes); // Рекурсивный вызов
+        print("Создан новый узел: $newNode");
+
+        // Рекурсивное построение поддерева
+        if (childChapter.branching.flag &&
+            childChapter.branching.condition.isNotEmpty) {
+          print(
+              "Начало рекурсивного построения поддерева для узла ${newNode.id}");
+          newNode.children = _initializeChildren(childChapter, nodes);
+          print(
+              "Завершено рекурсивное построение поддерева для узла ${newNode.id}");
+          print("Количество дочерних узлов: ${newNode.children.length}");
+        }
+
         children.add(newNode);
+        print("Узел добавлен в список детей");
+      } else {
+        print("Дочерний узел не найден для ID: ${entry.value}");
       }
     }
 
+    print("\n=== Завершение обработки узла ===");
+    print("Всего создано дочерних узлов: ${children.length}");
     return children;
   }
 
   void _addChildren(Node node) async {
-    List<TextEditingController> controllers = [];
+    List<TextEditingController> controllers = [TextEditingController()];
+    bool shouldRefresh = false;
+
     await showDialog(
       context: context,
       builder: (BuildContext context) {
         return StatefulBuilder(
-          builder: (context, setState) {
-            if (controllers.isEmpty) {
-              controllers.add(TextEditingController());
-            }
+          builder: (dialogContext, setDialogState) {
             return AlertDialog(
               title: const Text('Добавить дочерние узлы'),
               content: SizedBox(
@@ -258,35 +323,100 @@ class _TreeViewState extends State<TreeView> {
               actions: [
                 TextButton(
                   child: const Text('Отмена'),
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => Navigator.of(dialogContext)
+                      .pop(), // Используем контекст диалога
                 ),
                 TextButton(
                   child: const Text('+ Добавить поле'),
                   onPressed: () {
-                    setState(() {
+                    setDialogState(() {
                       controllers.add(TextEditingController());
                     });
                   },
                 ),
                 TextButton(
                   child: const Text('Добавить'),
-                  onPressed: () {
+                  onPressed: () async {
                     final titles = controllers
                         .map((ctrl) => ctrl.text.trim())
                         .where((title) => title.isNotEmpty)
                         .toList();
+
+                    print('Количество узлов для добавления: ${titles.length}');
+                    print(titles.isNotEmpty);
+
+                    print('Состояние перед добавлением:');
+                    print('node.children.length: ${node.children.length}');
+                    print('newNode: $newNode');
+
                     if (titles.isNotEmpty) {
-                      setState(() {
+                      setDialogState(() async {
+                        shouldRefresh = true;
                         for (var i = 0; i < titles.length; i++) {
+                          BigInt newNodeId =
+                              await createNode(widget.chapter.id, titles[i]);
+
+                          print("создали новый узел");
+                          print(newNodeId);
+
+                          chapterNodes?.forEach((element) async {
+                            if (element.id == node.id) {
+                              Map<String, BigInt> condition =
+                                  element.branching.condition;
+                              condition[titles[i]] = newNodeId;
+
+                              Branching br =
+                                  Branching(flag: true, condition: condition);
+
+                              element = ChapterNode(
+                                id: element.id,
+                                slug: element.slug,
+                                events: element.events,
+                                chapterId: element.chapterId,
+                                music: element.music,
+                                background: element.background,
+                                branching: br,
+                                end: element.end,
+                                comment: element.comment,
+                              );
+
+                              print("Добавили branching");
+                              print(element);
+                              print(element.branching);
+
+                              try {
+                                final success = await updateNode(element);
+                                if (success) {
+                                  print('Глава успешно обновлена на сервере');
+                                }
+                              } catch (e) {
+                                print('Ошибка при обновлении главы: $e');
+                                // Здесь можно добавить обработку ошибки
+                              }
+                            }
+                          });
+
+                          print("Добавляем главы в hcapter");
+                          print(chapter?.nodes);
+
+                          chapter?.nodes.add(newNodeId);
                           node.children.add(Node(
-                            id: newNode!,
+                            id: newNodeId,
                             title: titles[i],
                           ));
+
+                          print('Добавлен узел: ${titles[i]}');
+                          print(chapter?.nodes);
+                          print(newNodeId);
                         }
                       });
+
+                      print("Добавили главы в hcapter");
+                      print(chapter?.nodes);
+
+                      // Используем правильный контекст для закрытия диалога
+                      Navigator.of(dialogContext).pop();
                     }
-                    clearSelection();
-                    Navigator.of(context).pop();
                   },
                 ),
               ],
@@ -294,7 +424,11 @@ class _TreeViewState extends State<TreeView> {
           },
         );
       },
-    );
+    ).then((_) {
+      if (shouldRefresh) {
+        setState(() {});
+      }
+    });
   }
 
   Node? _findParentNode(Node currentNode, Node targetNode) {
@@ -318,14 +452,99 @@ class _TreeViewState extends State<TreeView> {
     return textPainter.size.width > maxWidth;
   }
 
-  void _deleteNode(Node node) {
-    setState(() {
-      clearSelection();
-      final parent = _findParentNode(root, node);
-      if (parent != null) {
-        parent.children.remove(node);
+  void _deleteNode(Node node) async {
+    print("=== Начало удаления узла ===");
+    print("ID удаляемого узла: ${node.id}");
+    print("Заголовок удаляемого узла: ${node.title}");
+    print("Количество дочерних узлов: ${node.children.length}");
+
+    clearSelection();
+    final parent = _findParentNode(root, node);
+    if (parent != null) {
+      print("Найден родительский узел: ${parent.title}");
+      parent.children.remove(node);
+      print("Узел удален из детей родителя");
+    }
+
+    chapterNodes?.forEach((element) {
+      if (element.id == node.id) {
+        print("Удаляем узел из chapterNodes");
+        chapterNodes?.remove(element);
       }
+
+      element.branching.condition.forEach((key, value) {
+        if (value == node.id) {
+          print("Удаляем связь ветвления: $key -> ${node.id}");
+          element.branching.condition.remove(key);
+        }
+      });
     });
+
+    List<BigInt> n = node.collectAllIds();
+    print("=== Важно: Количество ID в дереве после удаления: ${n.length} ===");
+
+    chapter = Chapter(
+      id: chapter?.id ?? BigInt.from(0),
+      name: chapter?.name ?? "",
+      startNode: chapter?.startNode ?? BigInt.from(0),
+      nodes: n,
+      characters: chapter?.characters ?? [],
+      status: chapter?.status ?? 0,
+      author: chapter?.author ?? BigInt.from(0),
+    );
+
+    print("Текущее состояние chapter:");
+    print("ID: ${chapter?.id}");
+    print("Имя: ${chapter?.name}");
+    print("Начальный узел: ${chapter?.startNode}");
+    print("Количество узлов: ${chapter?.nodes?.length}");
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final request = UpdateChapterRequest(
+          id: chapter!.id,
+          nodes: chapter?.nodes,
+          updateAuthorId: BigInt.from(1), // ID текущего пользователя
+        );
+
+        print("=== Создание запроса ===");
+        print("ID главы: ${request.id}");
+        print("Количество узлов для обновления: ${request.nodes?.length}");
+
+        print('Выполняем запрос на обновление главы');
+        final stopwatch = Stopwatch()..start();
+
+        final success = await updateChapter(request);
+        final duration = stopwatch.elapsedMilliseconds;
+
+        if (success) {
+          print('Глава успешно обновлена на сервере');
+          print("Время выполнения запроса: ${duration}ms");
+        } else {
+          print("Ошибка при обновлении главы");
+        }
+      } catch (e) {
+        print('=== Ошибка при обновлении главы ===');
+        print('Тип ошибки: ${e.runtimeType}');
+        print('Сообщение ошибки: $e');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка при обновлении главы: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+
+      setState(() {
+        chapter = chapter;
+        chapterNodes = chapterNodes;
+      });
+    });
+
+    // Сначала обновляем состояние
+
+    print("=== После обновления состояния ===");
   }
 
   @override
@@ -344,7 +563,8 @@ class _TreeViewState extends State<TreeView> {
           ),
           Expanded(
             child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal, // Добавляем горизонтальную прокрутку
+              scrollDirection: Axis.horizontal,
+              // Добавляем горизонтальную прокрутку
               child: Container(
                 width: MediaQuery.of(context).size.width, // Фиксируем ширину
                 child: SingleChildScrollView(

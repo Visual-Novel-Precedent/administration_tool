@@ -6,7 +6,9 @@ import 'package:administration_tool/models/admin.dart';
 import 'package:administration_tool/screens/character.dart';
 import 'package:flutter/material.dart';
 
+import '../backend_clients/chapter/create_chapter.dart';
 import '../backend_clients/chapter/get_chapter_list.dart';
+import '../backend_clients/character/create_character.dart';
 import '../backend_clients/character/get_characters.dart';
 import '../backend_clients/node/get_node_by_id.dart';
 import '../backend_clients/requests/approve_request.dart';
@@ -87,11 +89,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     var reqChapterId = request.requestedChapterId;
     switch (request.type) {
       case 0:
-        return 'Запрос на получение статуса суперадмина';
+        return 'Запрос на получение статуса суперадмина для ';
       case 1:
         return 'Запрос на публикацию главы $reqChapterId';
       case 2:
         return 'Запрос на регистрацию';
+      case 3:
+        return 'Запрос удаление главы $reqChapterId';
       default:
         return 'Неизвестный тип запроса';
     }
@@ -241,6 +245,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'UTF-8 байты: ${text.codeUnits.map((b) => b.toRadixString(2).padLeft(8, '0')).join(' ')}');
     print('Тип данных: ${text.runtimeType}');
     print('---------------------------');
+  }
+
+  String getStatusText(int status) {
+    switch (status) {
+      case 1:
+        return 'Черновик';
+      case 2:
+        return 'На проверке';
+      case 3:
+        return 'Опубликовано';
+      default:
+        return '';
+    }
+  }
+
+  Color getStatusColor(int status) {
+    switch (status) {
+      case 1: // Черновик
+      case 2: // На проверке
+        return Colors.grey;
+      case 3: // Опубликовано
+        return Colors.green;
+      default:
+        return Colors.transparent;
+    }
   }
 
   @override
@@ -481,28 +510,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         if (selectedOption == 'chapters') {
-                          setState(() {
-                            chapters.add(Chapter(
-                              id: generateRandomBigIntFromTime(),
-                              name: 'Новая глава',
-                              startNode: generateRandomBigIntFromTime(),
-                              nodes: [],
-                              characters: [],
-                              status: 0,
-                              author: widget.admin.id,
-                            ));
-                          });
+                          try {
+                            final request = CreateChapterRequest(
+                                author: widget.admin.id.toString());
+                            final newChapter = await createChapter(request);
+
+                            setState(() {
+                              chapters.add(newChapter);
+                            });
+
+                            // Добавляем автоматическое обновление страницы
+                            Future.delayed(Duration.zero, () {
+                              if (mounted) {
+                                _loadChapters();
+                              }
+                            });
+                          } catch (e) {
+                            print('Ошибка при создании главы: $e');
+                            // Здесь можно добавить показ ошибки пользователю
+                          }
                         } else {
-                          setState(() {
-                            characters.add(Character(
-                              id: generateRandomBigIntFromTime(),
-                              name: 'Новый персонаж',
-                              slug: 'new_character_${characters.length}',
-                              color: '#FFFFFF',
-                            ));
-                          });
+                          final NewCharacterData? character =
+                              await showDialog<NewCharacterData>(
+                            context: context,
+                            builder: (context) => CharacterDialog(),
+                          );
+
+                          if (character != null) {
+                            setState(() {
+                              characters.add(Character(
+                                id: character.id,
+                                name: character.name,
+                                // Используем введенное имя
+                                slug: character.slug,
+                                // Используем введенный slug
+                                color: '#FFFFFF',
+                              ));
+                            });
+
+                            Future.delayed(Duration.zero, () {
+                              if (mounted) {
+                                _loadCharacters();
+                              }
+                            });
+                          }
                         }
                       },
                       child: Text(
@@ -530,14 +583,79 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: ListTile(
-                              title: Text(chapter.name),
+                              title: Text(convertToUtf8(chapter.name)),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  Text(
+                                    getStatusText(chapter.status),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: getStatusColor(chapter.status),
+                                    ),
+                                  ),
                                   IconButton(
                                     icon: const Icon(Icons.delete),
-                                    onPressed: () {
-                                      // Добавьте логику удаления
+                                    onPressed: () async {
+                                      try {
+                                        final bool? confirmed =
+                                            await showDialog<bool>(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: const Text(
+                                                'Подтверждение удаления'),
+                                            content: const Text(
+                                                'Вы уверены, что хотите удалить эту главу?'),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(
+                                                    context, false),
+                                                child: const Text('Отмена'),
+                                              ),
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(
+                                                    context, true),
+                                                child: const Text('Удалить'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+
+                                        if (confirmed == true) {
+                                          createRequest(
+                                            CreateRequestRequest(
+                                              requestingAdminId:
+                                                  widget.admin.id.toString(),
+                                              chapterId:
+                                                  chapters[index].id.toString(),
+                                              type:
+                                                  3, // тип запроса на удаление главы
+                                            ),
+                                          );
+
+                                          setState(() {
+                                            chapters.removeAt(index);
+                                          });
+
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                  'Запрос на удаление главы отправлен'),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'Ошибка при отправке запроса: $e'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
                                     },
                                   ),
                                   IconButton(
@@ -548,23 +666,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       print("chapterNode");
                                       print(chapterNode);
                                       print("startNode");
-                                      print(chapters[index].startNode.toString());
+                                      print(
+                                          chapters[index].startNode.toString());
 
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => FutureBuilder<ChapterNode?>(
-                                            future: initializeChapterNode(chapters[index].startNode.toString()),
+                                          builder: (context) =>
+                                              FutureBuilder<ChapterNode?>(
+                                            future: initializeChapterNode(
+                                                chapters[index]
+                                                    .startNode
+                                                    .toString()),
                                             builder: (context, snapshot) {
                                               if (!snapshot.hasData) {
                                                 return const Center(
-                                                  child: CircularProgressIndicator(),
+                                                  child:
+                                                      CircularProgressIndicator(),
                                                 );
                                               }
 
                                               return ChapterScreen(
                                                 chapter: chapters[index],
                                                 chapterNode: snapshot.data!,
+                                                admin: widget.admin.id,
                                               );
                                             },
                                           ),
@@ -811,4 +936,115 @@ BigInt generateRandomBigIntFromTime() {
   final shiftedRight = shiftedLeft >> (shift / 2).round();
 
   return shiftedRight;
+}
+
+class CharacterDialog extends StatefulWidget {
+  @override
+  _CharacterDialogState createState() => _CharacterDialogState();
+}
+
+class _CharacterDialogState extends State<CharacterDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _slugController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _slugController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Создание персонажа'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Имя персонажа',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Введите имя персонажа';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _slugController,
+              decoration: const InputDecoration(
+                labelText: 'Slug',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Введите slug';
+                }
+                return null;
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Отмена'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            if (_formKey.currentState!.validate()) {
+              try {
+                final characterId = await createCharacter(
+                  _nameController.text,
+                  _slugController.text,
+                );
+
+                // Проверяем, что id не null
+                if (characterId == null) {
+                  throw Exception('ID персонажа не получен');
+                }
+
+                NewCharacterData data = NewCharacterData(
+                  id: characterId,
+                  // Теперь безопасно используем non-nullable значение
+                  name: _nameController.text,
+                  slug: _slugController.text,
+                );
+                Navigator.pop(context, data);
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Ошибка: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          },
+          child: const Text('Добавить'),
+        ),
+      ],
+    );
+  }
+}
+
+class NewCharacterData {
+  final BigInt id;
+  final String name;
+  final String slug;
+
+  NewCharacterData({
+    required this.id,
+    required this.name,
+    required this.slug,
+  });
 }

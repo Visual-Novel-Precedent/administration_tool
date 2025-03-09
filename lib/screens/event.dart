@@ -79,15 +79,13 @@ class CharacterItem extends StatelessWidget {
                 ),
               ],
             ),
-            TextField(
+            TextFormField(
               decoration: InputDecoration(
                 border: const OutlineInputBorder(),
                 hintText: character['text'],
               ),
-              onChanged: (value) {
-                character['text'] = value;
-                onTextChange(value);
-              },
+              initialValue: character['text'], // Используем initialValue вместо hintText
+              onChanged: onTextChange, // Прямой вызов callback
             ),
           ],
         ),
@@ -236,8 +234,10 @@ class _SceneEditorState extends State<SceneEditor> {
     }
   }
 
-  Future<void> updateText(String newText, EventForUpdate event) async {
-    event.text = newText;
+  void updateText(String newText, EventForUpdate event) {
+    setState(() {
+      event.text = newText;
+    });
   }
 
   static BigInt safeBigIntParse(String? value) {
