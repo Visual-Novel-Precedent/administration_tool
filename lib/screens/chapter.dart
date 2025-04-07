@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:administration_tool/screens/tree.dart';
 import 'package:flutter/material.dart';
+import 'package:windows1251/windows1251.dart';
 import 'dart:math';
 
 import '../backend_clients/chapter/update_chapter.dart';
@@ -20,6 +21,7 @@ import 'chapter.dart';
 import 'character_position_in_node.dart';
 import 'event.dart';
 import 'image_upload.dart';
+import 'dart:convert';
 
 class ChapterNodeForUpdate {
   BigInt? id;
@@ -373,19 +375,181 @@ class _ChapterScreenState extends State<ChapterScreen> {
     return result ?? {};
   }
 
-  Future<Uint8List?> handleMusicUpload() async {
-    if (chapterNodeForUpdate?.music != null) {
-      final BigInt mediaId = chapterNodeForUpdate?.music ?? BigInt.from(0);
-      final loadedAudio = await _loadMedia(mediaId);
-      return loadedAudio;
-    }
+  String convertToUtf8(String input) {
+    try {
+      // Преобразуем строку в байты
+      List<int> bytes = input.codeUnits;
 
-    return null;
+      // Попытка декодирования как UTF-8
+      try {
+        return utf8.decode(bytes);
+      } catch (e) {
+        // Если не получилось, пробуем использовать windows-1251
+        return windows1251.decode(bytes);
+      }
+    } catch (e) {
+      print('Ошибка конвертации строки: $e');
+      return input;
+    }
   }
 
-  String convertToUtf8(String input) {
-    List<int> bytes = input.codeUnits;
-    return utf8.decode(bytes);
+  void showEndDialog() {
+    print("rонцовка");
+    print(widget.chapterNode.end);
+    showDialog(
+      context: context,
+      builder: (context) {
+        final endResultController = TextEditingController(
+          text: chapterNodeForUpdate?.end?.endResult ?? '',
+        );
+        final endTextController = TextEditingController(
+          text: chapterNodeForUpdate?.end?.endText ?? '',
+        );
+
+        return StatefulBuilder(
+          builder: (dialogContext, stfSetState) {
+            return AlertDialog(
+              title: const Text('Настройка концовки'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(8.0),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.red),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      '⚠️ Важное предупреждение: если вы отметите концовку, то все события в этом узле не сохранятся',
+                      style: TextStyle(
+                        color: Colors.black12,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  CheckboxListTile(
+                    title: const Text('Это концовка'),
+                    value: chapterNodeForUpdate?.end?.flag,
+                    onChanged: (bool? value) {
+                      stfSetState(() {
+                        if (chapterNodeForUpdate?.end?.flag == false) {
+                          value = true;
+                          chapterNodeForUpdate?.end = EndInfo(
+                            flag: value ?? true,
+                            endResult: '',
+                            endText: '',
+                          );
+                        } else {
+                          value = false;
+                          chapterNodeForUpdate?.end = EndInfo(
+                            flag: value ?? false,
+                            endResult: '',
+                            endText: '',
+                          );
+                        }
+                      });
+                    },
+                  ),
+                  if ((chapterNodeForUpdate?.end?.flag ?? false))
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextField(
+                          controller: endResultController,
+                          decoration: const InputDecoration(
+                            labelText: 'Результат концовки',
+                            hintText: 'Введите результат',
+                          ),
+                          onChanged: (value) {
+                            stfSetState(() {
+                              chapterNodeForUpdate?.end = EndInfo(
+                                flag: chapterNodeForUpdate?.end?.flag ?? true,
+                                endResult: value,
+                                endText:
+                                    chapterNodeForUpdate?.end?.endText ?? '',
+                              );
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: endTextController,
+                          decoration: const InputDecoration(
+                            labelText: 'Текст концовки',
+                            hintText: 'Введите текст',
+                          ),
+                          onChanged: (value) {
+                            stfSetState(() {
+                              chapterNodeForUpdate?.end = EndInfo(
+                                flag: chapterNodeForUpdate?.end?.flag ?? true,
+                                endResult:
+                                    chapterNodeForUpdate?.end?.endResult ?? '',
+                                endText: value,
+                              );
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Отмена'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (chapterNodeForUpdate?.end?.flag == true) {
+                      if (endResultController.text.trim().isEmpty ||
+                          endTextController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Пожалуйста, заполните все поля для концовки'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+                    }
+
+                    chapterNodeForUpdate?.events = {};
+
+                    ChapterNode newNode =
+                        convertChapterNodeForUpdateToChapterNode(
+                            chapterNodeForUpdate);
+                    print("изменяем состояние на концовку");
+                    print(newNode);
+
+                    updateNode(newNode).then((success) {
+                      print("запрос на концоыку отправлен");
+                      if (success) {
+                        setState(() {
+                          chapterNode = newNode;
+                        });
+                        Navigator.pop(context);
+                      }
+                    }).catchError((e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Ошибка при обновлении узла: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    });
+                  },
+                  child: const Text('Сохранить'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -419,8 +583,8 @@ class _ChapterScreenState extends State<ChapterScreen> {
                         showDialog(
                           context: context,
                           builder: (context) {
-                            final controller =
-                                TextEditingController(text: _chapterTitle);
+                            final controller = TextEditingController(
+                                text: convertToUtf8(_chapterTitle));
                             return AlertDialog(
                               title: const Text('Редактировать название главы'),
                               content: TextField(
@@ -438,10 +602,17 @@ class _ChapterScreenState extends State<ChapterScreen> {
                                 TextButton(
                                   onPressed: () async {
                                     if (controller.text.isNotEmpty) {
+                                      var curName =
+                                          utf8.encode(controller.text);
                                       try {
+                                        final encodedText =
+                                            utf8.encode(controller.text);
+                                        final decodedText =
+                                            utf8.decode(encodedText);
+
                                         final request = UpdateChapterRequest(
                                           id: widget.chapter!.id,
-                                          name: controller.text,
+                                          name: decodedText,
                                           updateAuthorId: BigInt.from(1),
                                         );
 
@@ -555,6 +726,11 @@ class _ChapterScreenState extends State<ChapterScreen> {
                                   safeBigIntParse(newAudio);
                               audio = newAudioData;
                             });
+
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              setState(
+                                  () {}); // Повторный вызов для обновления UI
+                            });
                           });
                         }
                       });
@@ -601,6 +777,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
                         updateNode(newNode).then((success) {
                           if (success) {
                             print('Узел успешно обновлен');
+                            chapterNode = newNode;
                           } else {
                             print('Ошибка при обновлении узла');
                           }
@@ -636,34 +813,57 @@ class _ChapterScreenState extends State<ChapterScreen> {
                     },
                     child: const Text('Комментарий'),
                   ),
+                  Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      color: Colors.grey[300]),
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.zero,
+                          side: BorderSide.none),
+                      backgroundColor: Colors.transparent,
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
+                      foregroundColor: Colors.black,
+                      textStyle: TextStyle(fontSize: 16),
+                    ),
+                    onPressed: () => showEndDialog(),
+                    child: Text('Концовка'),
+                  ),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: widget.chapter.status != 1
                         ? null
                         : () async {
-                      try {
-                        createRequest(
-                          CreateRequestRequest(
-                            requestingAdminId: widget.admin.toString(),
-                            chapterId: widget.chapter.id.toString(),
-                            type: 1,
-                          ),
-                        );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Запрос на публикацию главы отправлен'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Ошибка при отправке запроса: $e'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    },
+                            try {
+                              createRequest(
+                                CreateRequestRequest(
+                                  requestingAdminId: widget.admin.toString(),
+                                  chapterId: widget.chapter.id.toString(),
+                                  type: 1,
+                                ),
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Запрос на публикацию главы отправлен'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content:
+                                      Text('Ошибка при отправке запроса: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
                     child: const Text('Опубликовать'),
                   ),
                 ],

@@ -41,6 +41,7 @@ dependencies:
   http_parser: any
   json_annotation: any
   audioplayers: any
+  windows1251: any
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

@@ -54,27 +54,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadChapters();
     _loadCharacters();
     _loadRequests();
-
-    // Добавляем слушатель для обновления при возврате
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-
-      // Проверяем, вернулись ли мы назад
-      if (ModalRoute.of(context)?.isCurrent != true) {
-        reloadData();
-      }
-    });
-  }
-
-  @override
-  void didUpdateWidget(DashboardScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!mounted) return;
-
-    // Обновляем данные при возврате на экран
-    if (ModalRoute.of(context)?.isCurrent == true) {
-      reloadData();
-    }
   }
 
   void reloadData() {
@@ -86,16 +65,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool isLoading = false;
 
   String getDescription(Requests request) {
-    var reqChapterId = request.requestedChapterId;
+    var reqChapterName = request.requestedChapterIdName;
+    var reqAdminName = request.requestingAdminName;
     switch (request.type) {
       case 0:
         return 'Запрос на получение статуса суперадмина для ';
       case 1:
-        return 'Запрос на публикацию главы $reqChapterId';
+        return 'Запрос на публикацию главы $reqChapterName';
       case 2:
-        return 'Запрос на регистрацию';
+        return 'Запрос на регистрацию $reqAdminName';
       case 3:
-        return 'Запрос удаление главы $reqChapterId';
+        return 'Запрос удаление главы $reqChapterName';
       default:
         return 'Неизвестный тип запроса';
     }
@@ -521,15 +501,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               chapters.add(newChapter);
                             });
 
-                            // Добавляем автоматическое обновление страницы
-                            Future.delayed(Duration.zero, () {
-                              if (mounted) {
-                                _loadChapters();
-                              }
-                            });
+                            await Future.delayed(const Duration(milliseconds: 500));
+                            if (mounted) {
+                              reloadData();
+                            }
                           } catch (e) {
                             print('Ошибка при создании главы: $e');
-                            // Здесь можно добавить показ ошибки пользователю
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Ошибка при создании главы: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
                           }
                         } else {
                           final NewCharacterData? character =
@@ -549,12 +532,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 color: '#FFFFFF',
                               ));
                             });
-
-                            Future.delayed(Duration.zero, () {
-                              if (mounted) {
-                                _loadCharacters();
-                              }
-                            });
                           }
                         }
                       },
@@ -571,7 +548,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ? requests.length
                             : characters.length,
                     itemBuilder: (context, index) {
-                      // существующий код создания элементов списка остается без изменений
                       if (selectedOption == 'chapters') {
                         final Chapter chapter = chapters[index];
                         return Padding(
@@ -633,10 +609,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             ),
                                           );
 
-                                          setState(() {
-                                            chapters.removeAt(index);
-                                          });
-
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(
                                             const SnackBar(
@@ -694,7 +666,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             },
                                           ),
                                         ),
-                                      );
+                                      ).then((_) {
+                                        if (mounted) {
+                                          reloadData();
+                                        }
+                                      });
                                     },
                                   ),
                                 ],
@@ -714,7 +690,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                               child: ExpansionTile(
                                 title: Text(
-                                    'Запрос от ${requests[index].requestingAdmin}'),
+                                    'Запрос от ${requests[index].requestingAdminName}'),
                                 children: [
                                   ListTile(
                                     title:
@@ -840,7 +816,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 builder: (context) => CharacterEditor(
                                     character: characters[index]),
                               ),
-                            );
+                            ).then((_) {
+                              if (mounted) {
+                                reloadData();
+                              }
+                            });
                           },
                         );
                       }

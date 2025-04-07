@@ -46,12 +46,11 @@ class CharacterItem extends StatelessWidget {
               children: [
                 Expanded(
                   child: DropdownButton<String>(
-                    value: character['characterId'] ?? null,
+                    value: character['characterId'] ?? '0', // Используем '0' как дефолтное значение
                     hint: const Text('Выберите персонажа'),
                     onChanged: (value) {
                       character['characterId'] = value;
-                      onCharacterChange(
-                          value!); // Вызываем callback при изменении
+                      onCharacterChange(value ?? '');
                     },
                     items: selectedCharacters.map((char) {
                       return DropdownMenuItem(
@@ -59,7 +58,7 @@ class CharacterItem extends StatelessWidget {
                         child: Text(char.values.first),
                       );
                     }).toList(),
-                  ),
+                  )
                 ),
                 Row(
                   children: [
@@ -194,6 +193,18 @@ class _SceneEditorState extends State<SceneEditor> {
       });
     });
 
+    eventForUpdate.forEach((key, value) {
+      if (value.character != BigInt.zero) {
+        bool characterStillExists = selectedCharacters.any((char) =>
+        char.keys.first == value.character
+        );
+
+        if (!characterStillExists) {
+          value.character = BigInt.zero;
+        }
+      }
+    });
+
     print("initSelectedCharacters");
     print(selectedCharacters);
   }
@@ -249,6 +260,16 @@ class _SceneEditorState extends State<SceneEditor> {
     } catch (e) {
       print('Ошибка парсинга BigInt: $value - $e');
       return BigInt.zero;
+    }
+  }
+
+  Future<void> _initializeAudio(EventForUpdate event) async {
+    try {
+      audio = await _loadMedia(event.sound);
+      setState(() {}); // Обновляем UI после загрузки
+    } catch (e) {
+      print('Ошибка при загрузке фона: $e');
+      rethrow;
     }
   }
 
@@ -356,30 +377,37 @@ class _SceneEditorState extends State<SceneEditor> {
             onConfigureCharacter: () =>
                 showDialogToAddCharacter(context, event),
             selectedCharacters: selectedCharacters,
-            onMusicClick: () {
-              if (eventForUpdate[index]?.sound != null) {
-                _loadMedia(eventForUpdate[index]!.sound).then((loadedAudio) {
-                  audio = loadedAudio;
+            onMusicClick: () async {
+              print('Нажата кнопка музыки');
+              print('Контекст: $context');
+              print('Событие: $index');
+              print('Звук: ${eventForUpdate[index]?.sound}');
 
-                  showDialog<String>(
-                    context: context,
-                    builder: (context) =>
-                        AudioUploadDialog(existingAudio: audio),
-                  ).then((newAudio) {
-                    if (newAudio != null) {
-                      _loadMedia(safeBigIntParse(newAudio))
-                          .then((newAudioData) {
-                        setState(() {
-                          eventForUpdate[index]!.sound =
-                              safeBigIntParse(newAudio);
-                          audio = newAudioData;
-                        });
-                      });
-                    }
+
+              _initializeAudio(event);
+              try {
+                final newAudio = await showDialog<String>(
+                  context: context,
+                  builder: (context) => StatefulBuilder(
+                    builder: (context, setState) => AudioUploadDialog(
+                      existingAudio: audio,
+                    ),
+                  ),
+                );
+
+                if (newAudio != null) {
+                  final newAudioData = await _loadMedia(safeBigIntParse(newAudio));
+                  setState(() {
+                    eventForUpdate[index]!.sound = safeBigIntParse(newAudio);
+                    audio = newAudioData;
                   });
-                }).catchError((e) {
-                  print('Ошибка при загрузке аудио: $e');
-                });
+
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    setState(() {});
+                  });
+                }
+              } catch (e) {
+                print('Ошибка при загрузке аудио: $e');
               }
             },
             onTextChange: (text) => updateText(text, eventForUpdate[index]!),

@@ -4,6 +4,8 @@ class Requests {
   final int status;
   final BigInt requestingAdmin;
   final BigInt requestedChapterId;
+  final String requestingAdminName;
+  final String requestedChapterIdName;
 
   Requests({
     required this.id,
@@ -11,6 +13,8 @@ class Requests {
     required this.status,
     required this.requestingAdmin,
     required this.requestedChapterId,
+    required this.requestingAdminName,
+    required this.requestedChapterIdName
   });
 
   // Метод для безопасного парсинга BigInt из строки
@@ -33,6 +37,8 @@ class Requests {
       status: json['Status'] ?? 0,
       requestingAdmin: safeBigIntParse(json['RequestingAdmin']),
       requestedChapterId: safeBigIntParse(json['RequestedChapterId']),
+      requestingAdminName: json['RequestingAdminName'] ?? '',
+      requestedChapterIdName: json['RequestedChapterIdName'] ?? '',
     );
   }
 
@@ -43,6 +49,8 @@ class Requests {
       'Status': status,
       'RequestingAdmin': requestingAdmin.toString(),
       'RequestedChapterId': requestedChapterId.toString(),
+      'RequestingAdminNae': requestingAdminName,
+      'RequestedChapterIdName': requestedChapterIdName,
     };
   }
 

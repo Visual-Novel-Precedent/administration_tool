@@ -36,7 +36,7 @@ Future<Chapter> createChapter(CreateChapterRequest request) async {
       body: jsonEncode(requestBody),
     );
 
-    if (response.statusCode == 201) {
+    if (response.statusCode == 200) {
       final Map<String, dynamic> responseBody = jsonDecode(response.body);
 
       return Chapter(

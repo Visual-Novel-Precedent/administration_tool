@@ -597,6 +597,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.4"
+  windows1251:
+    dependency: "direct main"
+    description:
+      name: windows1251
+      sha256: b747baa14e2dc7186aaeaea74658b90d0c9d0035c64bb4cd86f2dd2bffcf12b9
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.2"
   xdg_directories:
     dependency: transitive
     description:

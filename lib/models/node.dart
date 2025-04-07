@@ -158,17 +158,17 @@ class EndInfo {
 
   factory EndInfo.fromJson(Map<String, dynamic> json) {
     return EndInfo(
-      flag: json['Flag'] ?? false,
-      endResult: json['EndResult'] ?? '',
-      endText: json['EndText'] ?? '',
+      flag: json['end_flag'] ?? false,
+      endResult: json['end_result'] ?? '',
+      endText: json['end_text'] ?? '',
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'Flag': flag,
-      'EndResult': endResult,
-      'EndText': endText,
+      'end_flag': flag,
+      'end_result': endResult,
+      'end_text': endText,
     };
   }
 

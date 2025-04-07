@@ -5,7 +5,6 @@ import 'dart:ui';
 import 'package:administration_tool/models/media.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:hexcolor/hexcolor.dart';
 import 'package:image_picker_web/image_picker_web.dart';
 import 'dart:typed_data';
 
@@ -53,7 +52,20 @@ class _CharacterEditorState extends State<CharacterEditor> {
     nameController = TextEditingController(text: widget.character.name);
     slugController = TextEditingController(
         text: widget.character.name.toLowerCase().replaceAll(' ', '-'));
-    selectedColor = HexColor(widget.character.color);
+
+    String colorString = widget.character.color;
+
+    if (colorString.startsWith('#')) {
+      String hexValue = colorString.substring(1);
+      if (hexValue.length == 6) {
+        hexValue = 'FF$hexValue';
+      }
+      selectedColor = Color(int.parse('0x$hexValue'));
+    } else {
+      // Обработка других форматов или значение по умолчанию
+      selectedColor = Colors.white;
+    }
+
 
     _initEmotions(widget.character.emotions);
 
@@ -66,11 +78,13 @@ class _CharacterEditorState extends State<CharacterEditor> {
         isLoading = true;
       });
 
+      final colorHtml = '#${selectedColor.value.toRadixString(16).toUpperCase()}';
+
       // Собираем данные для сохранения
       final characterData = Character(
         name: nameController.text,
         slug: slugController.text,
-        color: '#${selectedColor.value.toRadixString(16).padLeft(8, '0')}',
+        color: colorHtml,
         emotions: newEmotions,
         id: widget.character.id,
       );
@@ -397,7 +411,7 @@ class _CharacterEditorState extends State<CharacterEditor> {
                                       onTap: () => pickImage(emotion),
                                       child: Container(
                                         width: 140,
-                                        height: 140,
+                                        height: 220,
                                         decoration: BoxDecoration(
                                           border:
                                               Border.all(color: Colors.grey),
@@ -412,7 +426,7 @@ class _CharacterEditorState extends State<CharacterEditor> {
                                                   emotions[emotion]!,
                                                   fit: BoxFit.cover,
                                                   width: 140,
-                                                  height: 140,
+                                                  height: 220,
                                                   errorBuilder: (context, error,
                                                       stackTrace) {
                                                     print(

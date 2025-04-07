@@ -44,6 +44,15 @@ class _AudioUploadDialogState extends State<AudioUploadDialog> {
     }
   }
 
+  @override
+  void dispose() {
+    if (_isPlaying) {
+      _togglePlayback();
+    }
+    _currentAudioElement?.remove();
+    super.dispose();
+  }
+
   void _setupExistingAudio() {
     print('Начало _setupExistingAudio');
 
@@ -178,101 +187,109 @@ class _AudioUploadDialogState extends State<AudioUploadDialog> {
     final double screenWidth = MediaQuery.of(context).size.width;
     final double dialogWidth = min(screenWidth * 0.8, 500);
 
-    return Dialog(
-      child: Container(
-        width: dialogWidth,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Загрузка аудио',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
+    return WillPopScope(
+      onWillPop: () async {
+        if (_isPlaying) {
+          _togglePlayback();
+        }
+        return true;
+      },
+      child: Dialog(
+        child: Container(
+          width: dialogWidth,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _audioUrl != null
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            IconButton(
-                              icon: Icon(
-                                  _isPlaying ? Icons.pause : Icons.play_arrow),
-                              onPressed: _togglePlayback,
-                            ),
-                            Text(_isPlaying
-                                ? 'Воспроизведение...'
-                                : 'Готово к воспроизведению'),
-                          ],
-                        )
-                      : const Center(child: Icon(Icons.music_off)),
-                  if (_uploadProgress > 0 && _uploadProgress < 100)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16),
-                      child: Column(
-                        children: [
-                          CircularProgressIndicator(
-                            value: _uploadProgress / 100,
-                            strokeWidth: 4,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${_uploadProgress.toInt()}%',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        ],
-                      ),
+                  const Text(
+                    'Загрузка аудио',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
-                  if (_error != null)
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        _error!,
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _selectAudio,
-              child: const Text('Выбрать аудио'),
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: () {
-                _uploadAudio(_audioBytes!, context);
-              },
-              child: const Text('Сохранить'),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Отмена'),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    _audioUrl != null
+                        ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                              _isPlaying ? Icons.pause : Icons.play_arrow),
+                          onPressed: _togglePlayback,
+                        ),
+                        Text(_isPlaying
+                            ? 'Воспроизведение...'
+                            : 'Готово к воспроизведению'),
+                      ],
+                    )
+                        : const Center(child: Icon(Icons.music_off)),
+                    if (_uploadProgress > 0 && _uploadProgress < 100)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: Column(
+                          children: [
+                            CircularProgressIndicator(
+                              value: _uploadProgress / 100,
+                              strokeWidth: 4,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '${_uploadProgress.toInt()}%',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (_error != null)
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          _error!,
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _selectAudio,
+                child: const Text('Выбрать аудио'),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () {
+                  _uploadAudio(_audioBytes!, context);
+                },
+                child: const Text('Сохранить'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Отмена'),
+              ),
+            ],
+          ),
         ),
-      ),
+      )
     );
   }
 }

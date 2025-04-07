@@ -466,28 +466,47 @@ class _TreeViewState extends State<TreeView> {
       print("Узел удален из детей родителя");
     }
 
+    // Создаем список узлов для удаления
+    List<ChapterNode> nodesToRemove = [];
+
     chapterNodes?.forEach((element) {
       if (element.id == node.id) {
-        print("Удаляем узел из chapterNodes");
-        chapterNodes?.remove(element);
+        print("Помечаем узел для удаления из chapterNodes");
+        nodesToRemove.add(element);
       }
+    });
 
+    // Удаляем помеченные узлы
+    nodesToRemove.forEach((nodeToRemove) {
+      chapterNodes?.remove(nodeToRemove);
+    });
+
+    // Обрабатываем связи ветвления
+    List<String> keysToRemove = [];
+    chapterNodes?.forEach((element) {
       element.branching.condition.forEach((key, value) {
         if (value == node.id) {
-          print("Удаляем связь ветвления: $key -> ${node.id}");
-          element.branching.condition.remove(key);
+          print("Помечаем связь ветвления для удаления: $key -> ${node.id}");
+          keysToRemove.add(key);
         }
       });
     });
 
-    List<BigInt> n = node.collectAllIds();
-    print("=== Важно: Количество ID в дереве после удаления: ${n.length} ===");
+    // Удаляем помеченные связи
+    keysToRemove.forEach((key) {
+      chapterNodes?.forEach((element) {
+        element.branching.condition.remove(key);
+      });
+    });
+
+    List<BigInt> remainingIds = [];
+    _collectRemainingIds(root, node.id, remainingIds);
 
     chapter = Chapter(
       id: chapter?.id ?? BigInt.from(0),
       name: chapter?.name ?? "",
       startNode: chapter?.startNode ?? BigInt.from(0),
-      nodes: n,
+      nodes: remainingIds,
       characters: chapter?.characters ?? [],
       status: chapter?.status ?? 0,
       author: chapter?.author ?? BigInt.from(0),
@@ -542,9 +561,19 @@ class _TreeViewState extends State<TreeView> {
       });
     });
 
-    // Сначала обновляем состояние
-
     print("=== После обновления состояния ===");
+  }
+
+  void _collectRemainingIds(Node? node, BigInt nodeIdToDelete, List<BigInt> ids) {
+    if (node == null || node.id == nodeIdToDelete) return;
+
+    ids.add(node.id);
+
+    if (node.children != null) {
+      for (var child in node.children) {
+        _collectRemainingIds(child, nodeIdToDelete, ids);
+      }
+    }
   }
 
   @override

@@ -18,10 +18,10 @@ Future<bool> updateNode(ChapterNode node) async {
         'Flag': node.branching.flag,
         'Condition': node.branching.condition.map((key, value) => MapEntry(key, value.toString()))
       },
-      'End': {
-        'Flag': node.end.flag,
-        'EndResult': node.end.endResult,
-        'EndText': node.end.endText
+      'end': {
+        'end_flag': node.end.flag,
+        'end_result': node.end.endResult,
+        'end_text': node.end.endText
       },
       'Comment': node.comment
     };
@@ -39,6 +39,9 @@ Future<bool> updateNode(ChapterNode node) async {
       headers: headers,
       body: jsonEncode(requestBody),
     );
+
+    print("response.statusCode");
+    print(response.statusCode);
 
     return response.statusCode == 200;
   } catch (e) {
