@@ -20,7 +20,7 @@ class _SceneCharactersState extends State<SceneCharacters> {
   List<Character> characters = [];
   EventForUpdate? event;
 
-  List<Map<String, dynamic>> charactersData = [];
+  List<Map<String, dynamic>>  charactersData = [];
 
   List<Map<String, dynamic>> availableCharacters = [];
 

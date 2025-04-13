@@ -6,15 +6,16 @@ import '../../models/node.dart';
 
 Future<bool> updateNode(ChapterNode node) async {
   print("запрос на сохранение узла");
+  print(node);
   try {
     final url = Uri.parse('http://localhost:8080/update-node');
     final requestBody = {
-      'Id': node.id.toString(),
-      'Slug': node.slug,
-      'Events': node.events.map((key, value) => MapEntry(key.toString(), value.toJson())),
-      'Music': node.music.toString(),
-      'Background': node.background.toString(),
-      'Branching': {
+      'id': node.id.toString(),
+      'slug': node.slug,
+      'events': node.events.map((key, value) => MapEntry(key.toString(), value.toJson())),
+      'music': node.music.toString(),
+      'background': node.background.toString(),
+      'branching': {
         'Flag': node.branching.flag,
         'Condition': node.branching.condition.map((key, value) => MapEntry(key, value.toString()))
       },
@@ -23,7 +24,7 @@ Future<bool> updateNode(ChapterNode node) async {
         'end_result': node.end.endResult,
         'end_text': node.end.endText
       },
-      'Comment': node.comment
+      'comment': node.comment
     };
 
     final headers = {

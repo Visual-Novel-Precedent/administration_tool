@@ -840,22 +840,12 @@ class CharacterItem extends StatelessWidget {
   final Character character;
   final VoidCallback? onEdit;
 
-  static Color safeColorParse(String? value) {
-    if (value == null || value.isEmpty) {
-      return Colors.transparent;
-    }
-
-    String hex = value.trim();
-    if (hex.startsWith('#')) {
-      hex = hex.substring(1);
-    }
-
-    try {
-      return Color(int.parse(hex, radix: 16));
-    } catch (e) {
-      print('Ошибка парсинга цвета: $value - $e');
-      return Colors.transparent;
-    }
+  Color htmlToColor(String htmlColor) {
+    final colorStr = htmlColor.replaceFirst('#', '');
+    final r = int.parse(colorStr.substring(0, 2), radix: 16);
+    final g = int.parse(colorStr.substring(2, 4), radix: 16);
+    final b = int.parse(colorStr.substring(4, 6), radix: 16);
+    return Color.fromRGBO(r, g, b, 1.0);
   }
 
   const CharacterItem({
@@ -867,36 +857,37 @@ class CharacterItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            ListTile(
-              leading: Container(
-                width: 4,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: safeColorParse(character.color),
-                ),
-              ),
-              title: Text(character.name),
-              subtitle: Text(
-                character.slug,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: onEdit,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          ListTile(
+            leading: Container(
+              width: 4,
+              height: 48,
+              decoration: BoxDecoration(
+                color: htmlToColor(character.color),
               ),
             ),
-          ],
-        ));
+            title: Text(character.name),
+            subtitle: Text(
+              character.slug,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.edit, color: Colors.blue),
+              onPressed: onEdit,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

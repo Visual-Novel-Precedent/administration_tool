@@ -357,69 +357,83 @@ class _SceneEditorState extends State<SceneEditor> {
           ),
         ),
       ),
-      body: ListView.builder(
-        itemCount: eventForUpdate.length,
-        itemBuilder: (context, index) {
-          final EventForUpdate event = eventForUpdate[index]!;
-
-          return CharacterItem(
-            character: {
-              'id': index,
-              'characterId': event.character.toString(),
-              'text': event.text ?? '',
-              'voiceOver': ''
+      body: Column(
+        children: [
+          const SizedBox(
+            height: 15,
+          ),
+          ElevatedButton(
+            onPressed: () {
+              _handleBackButton();
             },
-            onDelete: () {
-              setState(() {
-                eventForUpdate.remove(index);
-              });
-            },
-            onConfigureCharacter: () =>
-                showDialogToAddCharacter(context, event),
-            selectedCharacters: selectedCharacters,
-            onMusicClick: () async {
-              print('Нажата кнопка музыки');
-              print('Контекст: $context');
-              print('Событие: $index');
-              print('Звук: ${eventForUpdate[index]?.sound}');
+            child: const Text('Сохранить'),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: eventForUpdate.length,
+              itemBuilder: (context, index) {
+                final EventForUpdate event = eventForUpdate[index]!;
 
+                return CharacterItem(
+                  character: {
+                    'id': index,
+                    'characterId': event.character.toString(),
+                    'text': event.text ?? '',
+                    'voiceOver': ''
+                  },
+                  onDelete: () {
+                    setState(() {
+                      eventForUpdate.remove(index);
+                    });
+                  },
+                  onConfigureCharacter: () =>
+                      showDialogToAddCharacter(context, event),
+                  selectedCharacters: selectedCharacters,
+                  onMusicClick: () async {
+                    print('Нажата кнопка музыки');
+                    print('Контекст: $context');
+                    print('Событие: $index');
+                    print('Звук: ${eventForUpdate[index]?.sound}');
 
-              _initializeAudio(event);
-              try {
-                final newAudio = await showDialog<String>(
-                  context: context,
-                  builder: (context) => StatefulBuilder(
-                    builder: (context, setState) => AudioUploadDialog(
-                      existingAudio: audio,
-                    ),
-                  ),
+                    _initializeAudio(event);
+                    try {
+                      final newAudio = await showDialog<String>(
+                        context: context,
+                        builder: (context) => StatefulBuilder(
+                          builder: (context, setState) => AudioUploadDialog(
+                            existingAudio: audio,
+                          ),
+                        ),
+                      );
+
+                      if (newAudio != null) {
+                        final newAudioData = await _loadMedia(safeBigIntParse(newAudio));
+                        setState(() {
+                          eventForUpdate[index]!.sound = safeBigIntParse(newAudio);
+                          audio = newAudioData;
+                        });
+
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          setState(() {});
+                        });
+                      }
+                    } catch (e) {
+                      print('Ошибка при загрузке аудио: $e');
+                    }
+                  },
+                  onTextChange: (text) => updateText(text, eventForUpdate[index]!),
+                  onCharacterChange: (value) {
+                    setState(() {
+                      print("смена персонажа");
+                      print(value);
+                      eventForUpdate[index]!.character = safeBigIntParse(value);
+                    });
+                  },
                 );
-
-                if (newAudio != null) {
-                  final newAudioData = await _loadMedia(safeBigIntParse(newAudio));
-                  setState(() {
-                    eventForUpdate[index]!.sound = safeBigIntParse(newAudio);
-                    audio = newAudioData;
-                  });
-
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    setState(() {});
-                  });
-                }
-              } catch (e) {
-                print('Ошибка при загрузке аудио: $e');
-              }
-            },
-            onTextChange: (text) => updateText(text, eventForUpdate[index]!),
-            onCharacterChange: (value) {
-              setState(() {
-                print("смена персонажа");
-                print(value);
-                eventForUpdate[index]!.character = safeBigIntParse(value);
-              });
-            },
-          );
-        },
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {

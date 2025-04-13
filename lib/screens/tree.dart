@@ -66,6 +66,7 @@ class _TreeViewState extends State<TreeView> {
   late Node root;
   Node? selectedNode;
   BigInt? newNode;
+  bool _isLoading = true;
 
   Chapter? chapter;
   List<ChapterNode>? chapterNodes;
@@ -357,6 +358,7 @@ class _TreeViewState extends State<TreeView> {
                               await createNode(widget.chapter.id, titles[i]);
 
                           print("создали новый узел");
+                          print(titles[i]);
                           print(newNodeId);
 
                           chapterNodes?.forEach((element) async {

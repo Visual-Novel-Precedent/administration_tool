@@ -28,6 +28,9 @@ Future<BigInt> createNode(BigInt chapterId, String slug) async {
       'slug': slug,
     };
 
+    print("req create node");
+    print(requestBody);
+
     final response = await post(
       uri,
       headers: {

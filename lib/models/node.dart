@@ -3,8 +3,8 @@ class ChapterNode {
   final String slug;
   final Map<int, Event> events;
   final BigInt chapterId;
-  final BigInt music;
-  final BigInt background;
+  late BigInt music;
+  late BigInt background;
   final Branching branching;
   final EndInfo end;
   final String comment;
@@ -34,7 +34,8 @@ class ChapterNode {
     }
   }
 
-  static Map<int, Event> safeIntEventMapParse(dynamic? map, Function(dynamic) eventFactory) {
+  static Map<int, Event> safeIntEventMapParse(
+      dynamic? map, Function(dynamic) eventFactory) {
     if (map == null) return {};
 
     if (map is! Map) {
@@ -59,7 +60,8 @@ class ChapterNode {
 
     if (json['Events'] != null) {
       if (json['Events'] is Map) {
-        eventsMap = safeIntEventMapParse(json['Events'], (value) => Event.fromJson(value));
+        eventsMap = safeIntEventMapParse(
+            json['Events'], (value) => Event.fromJson(value));
       } else if (json['Events'] is int) {
         print('Warning: Events is int, converting to empty map');
         eventsMap = {};
@@ -70,15 +72,20 @@ class ChapterNode {
       id: json['Id'] != null ? safeBigIntParse(json['Id']) : BigInt.zero,
       slug: json['Slug'] ?? '',
       events: eventsMap ?? {},
-      chapterId: json['ChapterId'] != null ? safeBigIntParse(json['ChapterId']) : BigInt.zero,
-      music: json['Music'] != null ? safeBigIntParse(json['Music']) : BigInt.zero,
-      background: json['Background'] != null ? safeBigIntParse(json['Background']) : BigInt.zero,
-      branching: json['Branching'] != null ?
-      Branching.fromJson(json['Branching']) :
-      Branching(flag: false, condition: {}),
-      end: json['End'] != null ?
-      EndInfo.fromJson(json['End']) :
-      EndInfo(flag: false, endResult: '', endText: ''),
+      chapterId: json['ChapterId'] != null
+          ? safeBigIntParse(json['ChapterId'])
+          : BigInt.zero,
+      music:
+          json['Music'] != null ? safeBigIntParse(json['Music']) : BigInt.zero,
+      background: json['Background'] != null
+          ? safeBigIntParse(json['Background'])
+          : BigInt.zero,
+      branching: json['Branching'] != null
+          ? Branching.fromJson(json['Branching'])
+          : Branching(flag: false, condition: {}),
+      end: json['End'] != null
+          ? EndInfo.fromJson(json['End'])
+          : EndInfo(flag: false, endResult: '', endText: ''),
       comment: json['Comment'] ?? '',
     );
   }
@@ -87,7 +94,8 @@ class ChapterNode {
     return {
       'Id': id.toString(),
       'Slug': slug,
-      'Events': events.map((key, value) => MapEntry(key.toString(), value.toJson())),
+      'Events':
+          events.map((key, value) => MapEntry(key.toString(), value.toJson())),
       'ChapterId': chapterId.toString(),
       'Music': music.toString(),
       'Background': background.toString(),
@@ -113,7 +121,8 @@ class Branching {
     required this.condition,
   });
 
-  static Map<String, BigInt> safeStringBigIntMapParse(Map<String, dynamic>? map) {
+  static Map<String, BigInt> safeStringBigIntMapParse(
+      Map<String, dynamic>? map) {
     if (map == null) return {};
     return map.map((key, value) {
       try {
@@ -135,7 +144,8 @@ class Branching {
   Map<String, dynamic> toJson() {
     return {
       'Flag': flag,
-      'Condition': condition.map((key, value) => MapEntry(key, value.toString())),
+      'Condition':
+          condition.map((key, value) => MapEntry(key, value.toString())),
     };
   }
 
@@ -193,22 +203,27 @@ class Event {
     required this.text,
   });
 
-  static Map<BigInt, Map<BigInt, BigInt>> safeBigIntMapOfMapsParse(Map<String, dynamic>? map) {
+  static Map<BigInt, Map<BigInt, BigInt>> safeBigIntMapOfMapsParse(
+      Map<String, dynamic>? map) {
     if (map == null) return {};
     return map.map((key, value) {
       try {
         final BigInt keyBig = BigInt.parse(key);
-        final innerMap = (value as Map<String, dynamic>).map((innerKey, innerValue) {
+        final innerMap =
+            (value as Map<String, dynamic>).map((innerKey, innerValue) {
           try {
-            return MapEntry(BigInt.parse(innerKey), BigInt.parse(innerValue.toString()));
+            return MapEntry(
+                BigInt.parse(innerKey), BigInt.parse(innerValue.toString()));
           } catch (e) {
-            print('Ошибка парсинга внутренней карты: $innerKey - $innerValue - $e');
+            print(
+                'Ошибка парсинга внутренней карты: $innerKey - $innerValue - $e');
             return MapEntry(BigInt.zero, BigInt.zero);
           }
         });
         return MapEntry(keyBig, innerMap);
       } catch (e) {
-        print('Ошибка парсинга Map<BigInt, Map<BigInt, BigInt>>: $key - $value - $e');
+        print(
+            'Ошибка парсинга Map<BigInt, Map<BigInt, BigInt>>: $key - $value - $e');
         return MapEntry(BigInt.zero, {});
       }
     });
@@ -242,9 +257,11 @@ class Event {
       'type': type.toString(),
       'character': character.toString(),
       'sound': sound.toString(),
-      'characters_in_event': charactersInEvent.map((key, value) =>
-          MapEntry(key.toString(), value.map((innerKey, innerValue) =>
-              MapEntry(innerKey.toString(), innerValue.toString()))),
+      'characters_in_event': charactersInEvent.map(
+        (key, value) => MapEntry(
+            key.toString(),
+            value.map((innerKey, innerValue) =>
+                MapEntry(innerKey.toString(), innerValue.toString()))),
       ),
       'text': text,
     };

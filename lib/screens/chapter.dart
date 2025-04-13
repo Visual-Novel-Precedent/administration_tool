@@ -226,9 +226,9 @@ class _ChapterScreenState extends State<ChapterScreen> {
 
                       updateNode(newNode).then((success) {
                         if (success) {
-                          print('Узел успешно обновлен');
+                          print('Узел успешно обновлен с комментарием');
                         } else {
-                          print('Ошибка при обновлении узла');
+                          print('Ошибка при обновлении узла с комментарием');
                         }
                       }).catchError((e) {
                         print('Ошибка при обновлении узла: $e');
@@ -670,14 +670,37 @@ class _ChapterScreenState extends State<ChapterScreen> {
                       showDialog<String>(
                         context: context,
                         builder: (context) => ImageUploadDialog(
-                          background:
-                              background, // передаем текущее значение background
+                          background: background,
                         ),
                       ).then((newImage) {
                         if (newImage != null) {
+                          print("нолучили новую картинку");
+                          print(newImage);
+
+                          ChapterNode newNode =
+                              convertChapterNodeForUpdateToChapterNode(
+                            chapterNodeForUpdate,
+                          );
+
+                          newNode.background = safeBigIntParse(newImage);
+
+                          print(newNode);
+
+                          updateNode(newNode).then((success) {
+                            if (success) {
+                              print('узел успещно обновлен');
+                              chapterNode = newNode;
+                            } else {
+                              print('Ошибка при обновлении узла');
+                            }
+                          }).catchError((e) {
+                            print('Ошибка при обновлении узла: $e');
+                          });
+
                           _loadMedia(safeBigIntParse(newImage))
                               .then((newImageData) {
                             setState(() {
+                              print("hhhhhhhh");
                               chapterNodeForUpdate?.background =
                                   safeBigIntParse(newImage);
                               background = newImageData;
@@ -719,6 +742,23 @@ class _ChapterScreenState extends State<ChapterScreen> {
                         ),
                       ).then((newAudio) {
                         if (newAudio != null) {
+                          ChapterNode newNode =
+                              convertChapterNodeForUpdateToChapterNode(
+                                  chapterNodeForUpdate);
+
+                          newNode.music = safeBigIntParse(newAudio);
+
+                          updateNode(newNode).then((success) {
+                            if (success) {
+                              print('Узел успешно обновлен');
+                              chapterNode = newNode;
+                            } else {
+                              print('Ошибка при обновлении узла');
+                            }
+                          }).catchError((e) {
+                            print('Ошибка при обновлении узла: $e');
+                          });
+
                           _loadMedia(safeBigIntParse(newAudio))
                               .then((newAudioData) {
                             setState(() {
@@ -784,6 +824,17 @@ class _ChapterScreenState extends State<ChapterScreen> {
                         }).catchError((e) {
                           print('Ошибка при обновлении узла: $e');
                         });
+
+                        updateNode(newNode).then((success) {
+                          if (success) {
+                            print('Узел успешно обновлен');
+                            chapterNode = newNode;
+                          } else {
+                            print('Ошибка при обновлении узла');
+                          }
+                        }).catchError((e) {
+                          print('Ошибка при обновлении узла: $e');
+                        });
                       }
                     },
                     child: const Text('События'),
@@ -820,8 +871,8 @@ class _ChapterScreenState extends State<ChapterScreen> {
                   const SizedBox(height: 10),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                       shape: const RoundedRectangleBorder(
                           borderRadius: BorderRadius.zero,
                           side: BorderSide.none),

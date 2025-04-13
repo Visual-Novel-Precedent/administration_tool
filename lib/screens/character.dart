@@ -16,7 +16,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
 
-
 class CharacterEditor extends StatefulWidget {
   final Character character;
 
@@ -62,14 +61,24 @@ class _CharacterEditorState extends State<CharacterEditor> {
       }
       selectedColor = Color(int.parse('0x$hexValue'));
     } else {
-      // Обработка других форматов или значение по умолчанию
       selectedColor = Colors.white;
     }
-
 
     _initEmotions(widget.character.emotions);
 
     newEmotions = widget.character.emotions;
+  }
+
+  String colorToHtml(Color color) {
+    return '#${color.red.toRadixString(16).padLeft(2, '0')}${color.green.toRadixString(16).padLeft(2, '0')}${color.blue.toRadixString(16).padLeft(2, '0')}';
+  }
+
+  Color htmlToColor(String htmlColor) {
+    final colorStr = htmlColor.replaceFirst('#', '');
+    final r = int.parse(colorStr.substring(0, 2), radix: 16);
+    final g = int.parse(colorStr.substring(2, 4), radix: 16);
+    final b = int.parse(colorStr.substring(4, 6), radix: 16);
+    return Color.fromRGBO(r, g, b, 1.0);
   }
 
   Future<void> saveCharacter() async {
@@ -78,18 +87,15 @@ class _CharacterEditorState extends State<CharacterEditor> {
         isLoading = true;
       });
 
-      final colorHtml = '#${selectedColor.value.toRadixString(16).toUpperCase()}';
-
-      // Собираем данные для сохранения
       final characterData = Character(
         name: nameController.text,
         slug: slugController.text,
-        color: colorHtml,
+        color: colorToHtml(selectedColor),
         emotions: newEmotions,
         id: widget.character.id,
       );
 
-      updateCharacter(characterData);
+      await updateCharacter(characterData);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Персонаж сохранен')),
@@ -145,8 +151,6 @@ class _CharacterEditorState extends State<CharacterEditor> {
     super.dispose();
   }
 
-  late Future<void> uploadExisting;
-
   Future<void> _initEmotions(Map<BigInt, BigInt> emot) async {
     setState(() {
       isLoading = true;
@@ -198,14 +202,12 @@ class _CharacterEditorState extends State<CharacterEditor> {
 
   Future<void> pickImage(String emotion) async {
     try {
-      // Просто получаем изображение как bytes
       final bytes = await ImagePickerWeb.getImageAsBytes();
       if (bytes == null) {
         print('Ошибка: изображение не получено');
         return;
       }
 
-      // Проверяем формат PNG
       if (bytes.length >= 8 &&
           bytes[0] == 0x89 &&
           bytes[1] == 0x50 &&
@@ -290,7 +292,6 @@ class _CharacterEditorState extends State<CharacterEditor> {
     return Scaffold(
       body: Row(
         children: [
-          // Левая панель с вводом и выбором цвета
           Container(
             width: 300,
             padding: EdgeInsets.all(16),
@@ -321,7 +322,6 @@ class _CharacterEditorState extends State<CharacterEditor> {
                   ),
                 ),
 
-                // Панель для отображения цвета
                 Container(
                   margin: EdgeInsets.symmetric(vertical: 8),
                   height: 40,
@@ -351,9 +351,7 @@ class _CharacterEditorState extends State<CharacterEditor> {
                     ],
                   ),
                 ),
-                const SizedBox(
-                  height: 350,
-                ),
+                const SizedBox(height: 350),
                 ElevatedButton(
                   onPressed: saveCharacter,
                   child: Text('Сохранить'),
@@ -368,7 +366,6 @@ class _CharacterEditorState extends State<CharacterEditor> {
             ),
           ),
 
-          // Правая панель с эмоциями
           Expanded(
             child: Padding(
               padding: EdgeInsets.all(16),
@@ -383,76 +380,68 @@ class _CharacterEditorState extends State<CharacterEditor> {
                   isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : Flexible(
-                          child: GridView.builder(
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              childAspectRatio: 1,
-                              mainAxisSpacing: 4,
-                              crossAxisSpacing: 4,
-                            ),
-                            itemCount: emotions.length,
-                            itemBuilder: (context, index) {
-                              String emotion = emotions.keys.elementAt(index);
+                    child: GridView.builder(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        childAspectRatio: 1,
+                        mainAxisSpacing: 4,
+                        crossAxisSpacing: 4,
+                      ),
+                      itemCount: emotions.length,
+                      itemBuilder: (context, index) {
+                        String emotion = emotions.keys.elementAt(index);
 
-                              return Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    margin: EdgeInsets.only(
-                                      bottom:
-                                          index >= emotions.length - 1 ? 4 : 4,
-                                      top: 4,
-                                      left: index % 3 == 0 ? 4 : 2,
-                                      right: index % 3 == 2 ? 4 : 2,
-                                    ),
-                                    child: GestureDetector(
-                                      onTap: () => pickImage(emotion),
-                                      child: Container(
-                                        width: 140,
-                                        height: 220,
-                                        decoration: BoxDecoration(
-                                          border:
-                                              Border.all(color: Colors.grey),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: emotions[emotion] != null
-                                            ? ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                                child: Image.memory(
-                                                  emotions[emotion]!,
-                                                  fit: BoxFit.cover,
-                                                  width: 140,
-                                                  height: 220,
-                                                  errorBuilder: (context, error,
-                                                      stackTrace) {
-                                                    print(
-                                                        'Ошибка при загрузке изображения: $error');
-                                                    return const Icon(
-                                                        Icons.error_outline);
-                                                  },
-                                                ),
-                                              )
-                                            : const Icon(Icons.image),
-                                      ),
-                                    ),
+                        return Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Container(
+                              margin: EdgeInsets.only(
+                                bottom: index >= emotions.length - 1 ? 4 : 4,
+                                top: 4,
+                                left: index % 3 == 0 ? 4 : 2,
+                                right: index % 3 == 2 ? 4 : 2,
+                              ),
+                              child: GestureDetector(
+                                onTap: () => pickImage(emotion),
+                                child: Container(
+                                  width: 140,
+                                  height: 220,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.grey),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    emotion,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.black87,
+                                  child: emotions[emotion] != null
+                                      ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Image.memory(
+                                      emotions[emotion]!,
+                                      fit: BoxFit.cover,
+                                      width: 140,
+                                      height: 220,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        print('Ошибка при загрузке изображения: $error');
+                                        return const Icon(Icons.error_outline);
+                                      },
                                     ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                        ),
+                                  )
+                                      : const Icon(Icons.image),
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              emotion,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
                 ],
               ),
             ),
