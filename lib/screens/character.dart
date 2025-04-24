@@ -332,7 +332,7 @@ class _CharacterEditorState extends State<CharacterEditor> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
+                      const Text(
                         'Выбранный цвет',
                         style: TextStyle(
                           fontSize: 14,
@@ -354,13 +354,13 @@ class _CharacterEditorState extends State<CharacterEditor> {
                 const SizedBox(height: 350),
                 ElevatedButton(
                   onPressed: saveCharacter,
-                  child: Text('Сохранить'),
                   style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
+                  child: const Text('Сохранить'),
                 ),
               ],
             ),
@@ -368,7 +368,7 @@ class _CharacterEditorState extends State<CharacterEditor> {
 
           Expanded(
             child: Padding(
-              padding: EdgeInsets.all(16),
+              padding:  const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -376,12 +376,12 @@ class _CharacterEditorState extends State<CharacterEditor> {
                     'Загрузка изображений для эмоций',
                     style: Theme.of(context).textTheme.headline6,
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : Flexible(
                     child: GridView.builder(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
                         childAspectRatio: 1,
                         mainAxisSpacing: 4,
@@ -417,7 +417,7 @@ class _CharacterEditorState extends State<CharacterEditor> {
                                     child: Image.memory(
                                       emotions[emotion]!,
                                       fit: BoxFit.cover,
-                                      width: 140,
+                                      width: 88,
                                       height: 220,
                                       errorBuilder: (context, error, stackTrace) {
                                         print('Ошибка при загрузке изображения: $error');
@@ -429,10 +429,10 @@ class _CharacterEditorState extends State<CharacterEditor> {
                                 ),
                               ),
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
                             Text(
                               emotion,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 14,
                                 color: Colors.black87,
                               ),
