@@ -817,18 +817,10 @@ class _ChapterScreenState extends State<ChapterScreen> {
                         updateNode(newNode).then((success) {
                           if (success) {
                             print('Узел успешно обновлен');
-                            chapterNode = newNode;
-                          } else {
-                            print('Ошибка при обновлении узла');
-                          }
-                        }).catchError((e) {
-                          print('Ошибка при обновлении узла: $e');
-                        });
 
-                        updateNode(newNode).then((success) {
-                          if (success) {
-                            print('Узел успешно обновлен');
-                            chapterNode = newNode;
+                            setState(() {
+                              chapterNode = newNode;
+                            });
                           } else {
                             print('Ошибка при обновлении узла');
                           }

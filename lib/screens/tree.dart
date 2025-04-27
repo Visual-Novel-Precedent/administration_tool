@@ -172,6 +172,8 @@ class _TreeViewState extends State<TreeView> {
     print(nodeId);
     try {
       final ChapterNode? nodes = await getNodeById(safeBigIntParse(nodeId));
+      await Future.delayed(const Duration(milliseconds: 500));
+
       print("получено начальный узел");
       print(nodes);
       return nodes;
