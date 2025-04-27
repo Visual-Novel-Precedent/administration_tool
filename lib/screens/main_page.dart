@@ -497,13 +497,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 author: widget.admin.id.toString());
                             final newChapter = await createChapter(request);
 
-                            setState(() {
-                              chapters.add(newChapter);
-                            });
-
                             await Future.delayed(const Duration(milliseconds: 500));
-                            if (mounted) {
-                              reloadData();
+
+                            if (newChapter.id != BigInt.zero) {
+                              setState(() {
+                                chapters.add(newChapter);
+                              });
+
+                              await Future.delayed(
+                                  const Duration(milliseconds: 500));
+                              if (mounted) {
+                                reloadData();
+                              }
                             }
                           } catch (e) {
                             print('Ошибка при создании главы: $e');

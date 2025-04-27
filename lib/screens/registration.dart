@@ -110,9 +110,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
                   ElevatedButton(
                     onPressed: () async {
-                      final email = 'email@example.com';
-                      final username = 'Имя пользователя';
-                      final password = 'пароль';
+                      final email = emailController.text;
+                      final username = nameController.text;
+                      final password = passwordController.text;
 
                       // Проверка корректности email
                       if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {

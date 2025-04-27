@@ -34,6 +34,9 @@ Future<int?> registerAdmin(String email, String name, String password) async {
       password: password,
     );
 
+    print("запрос на регистрацию админа ");
+    print(request);
+
     // Отправляем POST-запрос напрямую
     final response = await post(
       uri,
