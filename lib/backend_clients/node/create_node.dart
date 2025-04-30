@@ -19,13 +19,14 @@ BigInt? safeBigIntParse(String? value) {
   }
 }
 
-Future<BigInt> createNode(BigInt chapterId, String slug) async {
+Future<BigInt> createNode(BigInt chapterId, String slug, BigInt parentId) async {
   try {
     final uri = Uri.parse('http://localhost:8080/create-node');
 
     final requestBody = {
       'chapter_id': chapterId.toString(),
       'slug': slug,
+      'parent': parentId.toString(),
     };
 
     print("req create node");
@@ -38,6 +39,10 @@ Future<BigInt> createNode(BigInt chapterId, String slug) async {
       },
       body: jsonEncode(requestBody),
     );
+
+    print("попытка создать узел");
+    print(response.body);
+    print(response.statusCode);
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> jsonMap = jsonDecode(response.body);
