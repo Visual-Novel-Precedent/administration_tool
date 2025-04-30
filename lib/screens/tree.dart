@@ -357,7 +357,7 @@ class _TreeViewState extends State<TreeView> {
                         shouldRefresh = true;
                         for (var i = 0; i < titles.length; i++) {
                           BigInt newNodeId =
-                              await createNode(widget.chapter.id, titles[i], node.id);
+                              await createNode(widget.chapter.id, titles[i]);
 
                           print("создали новый узел");
                           print(titles[i]);
@@ -387,6 +387,16 @@ class _TreeViewState extends State<TreeView> {
                               print("Добавили branching");
                               print(element);
                               print(element.branching);
+
+                              try {
+                                final success = await updateNode(element);
+                                if (success) {
+                                  print('Глава успешно обновлена на сервере');
+                                }
+                              } catch (e) {
+                                print('Ошибка при обновлении главы: $e');
+                                // Здесь можно добавить обработку ошибки
+                              }
                             }
                           });
 
