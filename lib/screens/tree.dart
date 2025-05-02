@@ -356,8 +356,8 @@ class _TreeViewState extends State<TreeView> {
                       setDialogState(() async {
                         shouldRefresh = true;
                         for (var i = 0; i < titles.length; i++) {
-                          BigInt newNodeId =
-                              await createNode(widget.chapter.id, titles[i]);
+                          BigInt newNodeId = await createNode(
+                              widget.chapter.id, titles[i], node.id);
 
                           print("создали новый узел");
                           print(titles[i]);
@@ -388,15 +388,15 @@ class _TreeViewState extends State<TreeView> {
                               print(element);
                               print(element.branching);
 
-                              try {
-                                final success = await updateNode(element);
-                                if (success) {
-                                  print('Глава успешно обновлена на сервере');
-                                }
-                              } catch (e) {
-                                print('Ошибка при обновлении главы: $e');
-                                // Здесь можно добавить обработку ошибки
-                              }
+                              // try {
+                              //   final success = await updateNode(element);
+                              //   if (success) {
+                              //     print('Глава успешно обновлена на сервере');
+                              //   }
+                              // } catch (e) {
+                              //   print('Ошибка при обновлении главы: $e');
+                              //   // Здесь можно добавить обработку ошибки
+                              // }
                             }
                           });
 
@@ -568,7 +568,8 @@ class _TreeViewState extends State<TreeView> {
     print("=== После обновления состояния ===");
   }
 
-  void _collectRemainingIds(Node? node, BigInt nodeIdToDelete, List<BigInt> ids) {
+  void _collectRemainingIds(
+      Node? node, BigInt nodeIdToDelete, List<BigInt> ids) {
     if (node == null || node.id == nodeIdToDelete) return;
 
     ids.add(node.id);
