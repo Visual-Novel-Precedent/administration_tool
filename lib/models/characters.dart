@@ -13,7 +13,6 @@ class Character {
     this.emotions = const {},
   });
 
-  // Метод для безопасного парсинга BigInt из строки
   static BigInt safeBigIntParse(String? value) {
     if (value == null || value.isEmpty) {
       return BigInt.zero;
