@@ -84,7 +84,6 @@ class ChapterScreen extends StatefulWidget {
 }
 
 class _ChapterScreenState extends State<ChapterScreen> {
-  // Добавляем состояние для заголовка
   String _chapterTitle = '';
   List<ChapterNode>? _chapterNodes;
   ChapterNode? chapterNode;
@@ -279,7 +278,6 @@ class _ChapterScreenState extends State<ChapterScreen> {
   }
 
   Future<void> initializeChapterNode(String nodeId) async {
-    print("rrrrrrrrrrrrrr");
     try {
       final ChapterNode? nodes = await getNodeById(safeBigIntParse(nodeId));
       chapterNode = nodes;
@@ -333,7 +331,6 @@ class _ChapterScreenState extends State<ChapterScreen> {
   }
 
   Future<ChapterNodes> processChapterNodes(BigInt chapterId) async {
-    print("leeeetsGoooooooo");
     try {
       final nodes = await getNodesByChapterId(chapterId);
 
@@ -666,7 +663,6 @@ class _ChapterScreenState extends State<ChapterScreen> {
                       textStyle: const TextStyle(fontSize: 16),
                     ),
                     onPressed: () {
-                      // Удаляем проверку на null
                       showDialog<String>(
                         context: context,
                         builder: (context) => ImageUploadDialog(

@@ -7,14 +7,11 @@ import '../../models/media.dart';
 
 Future<ToolMedia?> getMediaById(String id) async {
   try {
-    // Создаем URL для запроса
     final url = Uri.parse('http://localhost:8080/get-media-by-id');
 
-    // Подготавливаем данные для запроса
     final request = GetMediaByIdRequest(Id: id);
     final body = jsonEncode(request.toJson());
 
-    // Отправляем POST-запрос
     final response = await post(
       url,
       headers: {
@@ -23,15 +20,12 @@ Future<ToolMedia?> getMediaById(String id) async {
       body: body,
     );
 
-    // Проверяем статус ответа
     if (response.statusCode == 200) {
-      // Извлекаем контент-тип из заголовков
+
       final contentType = response.headers['content-type'];
 
-      // Читаем данные файла используя bodyBytes вместо bytes
       final fileData = response.bodyBytes;
 
-      // Возвращаем объект ToolMedia
       return ToolMedia(
         contentType: contentType ?? '',
         fileData: fileData,

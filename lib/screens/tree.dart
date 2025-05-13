@@ -183,7 +183,6 @@ class _TreeViewState extends State<TreeView> {
     }
   }
 
-  // Change the return type from void to Node
   Node initializeNode(
       Node node, ChapterNode startNode, List<ChapterNode> nodes) {
     print("aормируем список");
@@ -191,14 +190,12 @@ class _TreeViewState extends State<TreeView> {
     print(startNode);
     print(nodes);
 
-    // Инициализируем базовые поля узла
     node.id = startNode.id;
     node.title = startNode.slug;
 
     print(startNode.branching.flag);
     print(startNode.branching.condition.isNotEmpty);
 
-    // Если есть флаг ветвления, создаем детей рекурсивно
     if (startNode.branching.flag && startNode.branching.condition.isNotEmpty) {
       print("зашли");
       node.children = _initializeChildren(startNode, nodes);
@@ -209,7 +206,7 @@ class _TreeViewState extends State<TreeView> {
     print("заполненный узел");
     print(node);
 
-    return node; // Возвращаем заполненный узел
+    return node;
   }
 
   static BigInt safeBigIntParse(String? value) {
@@ -387,16 +384,6 @@ class _TreeViewState extends State<TreeView> {
                               print("Добавили branching");
                               print(element);
                               print(element.branching);
-
-                              // try {
-                              //   final success = await updateNode(element);
-                              //   if (success) {
-                              //     print('Глава успешно обновлена на сервере');
-                              //   }
-                              // } catch (e) {
-                              //   print('Ошибка при обновлении главы: $e');
-                              //   // Здесь можно добавить обработку ошибки
-                              // }
                             }
                           });
 
@@ -418,7 +405,6 @@ class _TreeViewState extends State<TreeView> {
                       print("Добавили главы в hcapter");
                       print(chapter?.nodes);
 
-                      // Используем правильный контекст для закрытия диалога
                       Navigator.of(dialogContext).pop();
                     }
                   },

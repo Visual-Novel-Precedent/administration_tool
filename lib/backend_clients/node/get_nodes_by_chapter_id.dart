@@ -14,7 +14,6 @@ class ChapterNodes {
   });
 
   factory ChapterNodes.fromJson(Map<String, dynamic> json) {
-    // Сначала проверяем тип данных для каждого ключа
     void debugType(String key, dynamic value) {
       print('$key: ${value.runtimeType}');
     }
@@ -22,7 +21,6 @@ class ChapterNodes {
     debugType('nodes', json['nodes']);
     debugType('start_node', json['start_node']);
 
-    // Если значение является int, конвертируем его в Map
 
     // Обрабатываем nodes
     List<ChapterNode> processedNodes = [];
@@ -43,7 +41,6 @@ class ChapterNodes {
       }
     }
 
-    // Обрабатываем start_node
     ChapterNode? processedStartNode;
     dynamic startNodeValue = json['start_node'];
 
@@ -93,7 +90,6 @@ Future<ChapterNodes> getNodesByChapterId(BigInt chapterId) async {
     if (response.statusCode == 200) {
       final Map<String, dynamic> decodedResponse = jsonDecode(response.body);
 
-      // Добавляем отладочную информацию
       print('Ответ сервера:');
       print(decodedResponse);
 

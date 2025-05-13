@@ -43,7 +43,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   List<Requests> requests = [];
 
-  // Добавляем список персонажей
   List<Character> characters = [];
 
   ChapterNode? chapterNode;
@@ -211,7 +210,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // Добавьте этот код для отладки
   void debugText(String? text) {
     if (text == null) {
       print('Текст равен null');
@@ -359,8 +357,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       );
 
                                       if (confirmed == true) {
-                                        // Здесь добавьте логику отправки запроса на суперадмин
-                                        // Например:
                                         try {
                                           createRequest(CreateRequestRequest(
                                               requestingAdminId:
@@ -991,7 +987,6 @@ class _CharacterDialogState extends State<CharacterDialog> {
 
                 NewCharacterData data = NewCharacterData(
                   id: characterId,
-                  // Теперь безопасно используем non-nullable значение
                   name: _nameController.text,
                   slug: _slugController.text,
                 );

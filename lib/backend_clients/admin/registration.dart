@@ -27,7 +27,6 @@ Future<int?> registerAdmin(String email, String name, String password) async {
   try {
     final uri = Uri.parse('http://localhost:8080/admin-registration');
 
-    // Создаем экземпляр RegistrationRequest
     final request = RegistrationRequest(
       email: email,
       name: name,
@@ -37,7 +36,6 @@ Future<int?> registerAdmin(String email, String name, String password) async {
     print("запрос на регистрацию админа ");
     print(request);
 
-    // Отправляем POST-запрос напрямую
     final response = await post(
       uri,
       headers: {

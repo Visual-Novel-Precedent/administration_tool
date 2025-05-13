@@ -20,7 +20,7 @@ class CharacterItem extends StatelessWidget {
   final VoidCallback onMusicClick;
   final Function(String) onTextChange;
   final Function(String)
-      onCharacterChange; // Новый callback для обновления персонажа
+      onCharacterChange;
 
   const CharacterItem({
     required this.character,
@@ -29,7 +29,7 @@ class CharacterItem extends StatelessWidget {
     required this.selectedCharacters,
     required this.onMusicClick,
     required this.onTextChange,
-    required this.onCharacterChange, // Обязательный параметр
+    required this.onCharacterChange,
   });
 
   @override
@@ -315,12 +315,10 @@ class _SceneEditorState extends State<SceneEditor> {
       print("Подготовлены данные для возврата:");
       print(newEvent);
 
-      // Используем await для получения результата
       bool result = await Navigator.maybePop(context, newEvent);
 
       if (result == null || !result) {
         print("Ошибка при возврате на предыдущий экран");
-        // Попытка через SystemNavigator
         SystemNavigator.pop();
       } else {
         print("Успешный возврат на предыдущий экран");

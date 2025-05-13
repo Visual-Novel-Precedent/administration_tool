@@ -70,7 +70,6 @@ class _AudioUploadDialogState extends State<AudioUploadDialog> {
 
       print('Размер аудио: ${_audioBytes?.length}');
 
-      // Объявляем mimeType снаружи условного блока
       String mimeType = 'audio/mpeg';
 
       if (_audioBytes!.length > 4) {
