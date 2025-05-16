@@ -883,7 +883,7 @@ class _ChapterScreenState extends State<ChapterScreen> {
                                 CreateRequestRequest(
                                   requestingAdminId: widget.admin.toString(),
                                   chapterId: widget.chapter.id.toString(),
-                                  type: 1,
+                                  type: 2,
                                 ),
                               );
                               ScaffoldMessenger.of(context).showSnackBar(

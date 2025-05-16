@@ -50,7 +50,7 @@ class _CharacterEditorState extends State<CharacterEditor> {
     super.initState();
     nameController = TextEditingController(text: widget.character.name);
     slugController = TextEditingController(
-        text: widget.character.name.toLowerCase().replaceAll(' ', '-'));
+        text: widget.character.slug);
 
     String colorString = widget.character.color;
 
